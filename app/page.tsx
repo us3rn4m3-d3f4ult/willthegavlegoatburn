@@ -7,6 +7,7 @@ import { PriceChart } from "@/components/PriceChart";
 import { TradePanel } from "@/components/TradePanel";
 import { Comments } from "@/components/Comments";
 import { LiveMarket } from "@/components/LiveMarket";
+import { BookPanel } from "@/components/BookPanel";
 import { fmtCompact, fmtUsd } from "@/lib/format";
 import { FAQ, SITE, faqJsonLd } from "@/lib/seo";
 import type { Metadata } from "next";
@@ -121,12 +122,14 @@ export default function HomePage() {
           </div>
         </section>
 
+        <BookPanel />
+
         <section className="rounded-card border border-line bg-surface p-5">
           <h2 className="text-[13px] font-semibold tracking-tight">Recent trades</h2>
           <p className="mt-2 text-[12px] leading-relaxed text-muted">
-            There is no order book — this is an AMM, so trades are always available and
-            the price moves with the pool. The live trade feed needs an indexer; the public
-            RPC refuses the log query. Nothing here is invented in the meantime.
+            Trading runs against an AMM, so an order always fills and the price moves with the
+            pool. A limit order book is deployed alongside it and its resting orders are listed
+            above, read straight from the contract.
           </p>
         </section>
 

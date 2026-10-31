@@ -25,7 +25,18 @@ export const chain = defineChain({
         : undefined,
 });
 
-export const publicClient = createPublicClient({ chain, transport: http(RPC_URL) });
+// The Alchemy app is restricted to this site's domain, and only the browser sends
+// an Origin header automatically — server-side reads must send it too or they 403.
+const SITE_ORIGIN = process.env.NEXT_PUBLIC_SITE_ORIGIN ?? "https://willthegavlegoatburn.com";
+
+export const publicClient = createPublicClient({
+  chain,
+  transport: http(
+    RPC_URL,
+    typeof window === "undefined" ? { fetchOptions: { headers: { origin: SITE_ORIGIN } } } : {},
+  ),
+});
+
 
 const market = process.env.NEXT_PUBLIC_MARKET_ADDRESS ?? "";
 const usdc = process.env.NEXT_PUBLIC_USDC_ADDRESS ?? "";
@@ -36,6 +47,33 @@ export const CONFIGURED = /^0x[0-9a-fA-F]{40}$/.test(market) && /^0x[0-9a-fA-F]{
 export const MARKET_ADDRESS = market as Address;
 export const USDC_ADDRESS = usdc as Address;
 export const CHAIN_ID_PUBLIC = CHAIN_ID;
+
+const book = process.env.NEXT_PUBLIC_BOOK_ADDRESS ?? "";
+
+/** True when an order-book market has been deployed and pointed at. */
+export const BOOK_CONFIGURED = /^0x[0-9a-fA-F]{40}$/.test(book);
+export const BOOK_ADDRESS = book as Address;
+
+export const BOOK_ABI = [
+  { type: "function", name: "nextOrderId", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "isTrading", stateMutability: "view", inputs: [], outputs: [{ type: "bool" }] },
+  {
+    type: "function",
+    name: "orders",
+    stateMutability: "view",
+    inputs: [{ name: "", type: "uint256" }],
+    outputs: [
+      { name: "maker", type: "address" },
+      { name: "isYes", type: "bool" },
+      { name: "isAsk", type: "bool" },
+      { name: "active", type: "bool" },
+      { name: "expiresAt", type: "uint64" },
+      { name: "shares", type: "uint256" },
+      { name: "price", type: "uint256" },
+      { name: "escrow", type: "uint256" },
+    ],
+  },
+] as const;
 
 export const ERC20_ABI = [
   {
