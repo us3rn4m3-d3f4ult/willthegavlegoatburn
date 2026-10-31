@@ -45,7 +45,11 @@ export function BookPanel() {
       <header className="flex items-center justify-between border-b border-line px-4 py-3">
         <h2 className="text-[13px] font-semibold tracking-tight">Order book</h2>
         <span className="text-[11px] text-dim">
-          {book?.configured ? `${book.count ?? 0} orders ever placed` : "not deployed"}
+          {book === null
+            ? "\u2026"
+            : book.configured
+              ? `${book.count ?? 0} orders ever placed`
+              : "not deployed"}
         </span>
       </header>
 
