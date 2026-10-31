@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SITE } from "@/lib/seo";
 
 const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
   {
@@ -44,6 +45,17 @@ export function Footer() {
             </p>
             <p className="mt-1 text-[12px] text-dim">
               You pay only your own network fee
+            </p>
+            <p className="mt-4 text-[12px] text-dim">
+              Open source —{" "}
+              <a
+                href={SITE.repo}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline decoration-line2 underline-offset-2 hover:text-muted"
+              >
+                source on GitHub
+              </a>
             </p>
           </div>
 

@@ -13,6 +13,9 @@ export const SITE = {
     "The Gävle goat has burned 30+ times since 1966. Trade Yes or No on 2026 in USDC on Base — non-custodial, no fees, no house.",
   locale: "en_GB",
   themeColor: "#000000",
+  /** Public source. The open-source claim is only checkable if this is linked. */
+  repo: "https://github.com/us3rn4m3-d3f4ult/willthegavlegoatburn",
+  repoLabel: "github.com/us3rn4m3-d3f4ult/willthegavlegoatburn",
 } as const;
 
 export type FaqItem = { q: string; a: string };
@@ -32,7 +35,7 @@ export const FAQ: FaqItem[] = [
   },
   {
     q: "Who is behind this?",
-    a: "An open-source community project, not a company. The market is a smart contract on Base, so the rules are fixed in code instead of being decided by an operator. It is not affiliated with Polymarket or any exchange — Polymarket does not currently list a Gävle goat market, which is why a group of people who follow the goat built one themselves.",
+    a: "An open-source community project, not a company. The market is a smart contract on Base and the whole thing is public at github.com/us3rn4m3-d3f4ult/willthegavlegoatburn, so anyone can read the rules and check that the contract does what this page says. It is not affiliated with Polymarket or any exchange — Polymarket does not currently list a Gävle goat market, which is why a group of people who follow the goat built one themselves.",
   },
   {
     q: "Is this custodial? Does it hold my funds?",
@@ -65,6 +68,7 @@ export function orgJsonLd() {
     name: SITE.name,
     url: SITE.url,
     email: "contact@willthegavlegoatburn.com",
+    sameAs: [SITE.repo],
     description:
       "Unofficial, non-custodial prediction market on whether the Gävle goat burns. Not affiliated with Gävle kommun.",
   };
