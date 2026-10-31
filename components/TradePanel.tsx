@@ -318,6 +318,12 @@ export function TradePanel({
       setStatus("Still loading the market's closing time — try again in a moment.");
       return;
     }
+    // The contract rejects price 0 and price above 100¢; catch it before the
+    // deposit moves any money, because the deposit happens first.
+    if (!(limitPrice > 0) || limitPrice > 1) {
+      setStatus("Enter a price between 0.1¢ and 100¢.");
+      return;
+    }
     if (!w || !account) return;
 
     if (action === "buy" && shortUsdc > 1e-9) {
