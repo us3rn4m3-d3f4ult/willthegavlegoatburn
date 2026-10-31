@@ -86,14 +86,30 @@ save.
 
 ### 2.5 DNS records
 
-**DNS → Records:**
+**Phase 1 — get the certificate first (proxy OFF):**
+
+| Type | Name | Content | Proxy |
+|---|---|---|---|
+| A | `@` | `148.135.185.56` | **DNS only** (grey) |
+
+Wait ~60s, then restart Caddy: `docker compose restart caddy`. It issues a Let's
+Encrypt cert over plain HTTP-01 with nothing in the way. Confirm in
+`docker logs gavle-caddy | grep -i certificate`.
+
+**Phase 2 — now turn the proxy on:**
 
 | Type | Name | Content | Proxy |
 |---|---|---|---|
 | A | `@` | `148.135.185.56` | **Proxied** (orange) |
-| CNAME | `www` | `willthegavlegoatburn.com` | **Proxied** |
+| CNAME | `www` | `willthegavlegoatburn.com` | **Proxied** (orange) |
 
-### 2.6 TLS — the part people get wrong
+Then do 2.6 (SSL mode + Always Use HTTPS). This order matters: with the proxy on
+*and* "Always Use HTTPS" set **before** an origin certificate exists, the ACME
+HTTP-01 challenge gets redirected at the Cloudflare edge and certificate issuance
+deadlocks.
+
+No `AAAA` record — the box has no IPv6.
+
 
 Set **SSL/TLS → Overview → Full (strict)**.
 
