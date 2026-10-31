@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { createWalletClient, custom, type Address, type WalletClient } from "viem";
 import { createPortal } from "react-dom";
 import Link from "next/link";
@@ -47,6 +47,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [connecting, setConnecting] = useState(false);
   const [wallets, setWallets] = useState<Announced[]>([]);
   const [connectError, setConnectError] = useState("");
+  const inFlight = useRef(false);
 
   // EIP-6963: every installed wallet announces itself with a name and icon, so we
   // can show a real picker instead of guessing what window.ethereum is.
@@ -102,11 +103,16 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const connect = useCallback(async (target?: Announced) => {
+    // MetaMask refuses a second wallet_requestPermissions while one is pending
+    // (error -32002), which looks like "nothing happens". Never stack them.
+    if (inFlight.current) return;
+    inFlight.current = true;
     if (target) activeProvider = target.provider;
     // Some wallets only announce via EIP-6963 and never set window.ethereum, so
     // fall back to the announced provider before giving up.
     const eth = (target?.provider ?? provider() ?? wallets[0]?.provider) as Eip1193 | null;
     if (!eth) {
+      inFlight.current = false;
       setConnectError("No wallet found in this browser. Install MetaMask or Coinbase Wallet.");
       return;
     }
@@ -123,9 +129,17 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       setChainId(Number.parseInt(id, 16));
     } catch (err) {
       const e = err as { code?: number; message?: string };
-      if (e.code === 4001) setConnectError("You rejected the request in the wallet.");
-      else setConnectError(e.message ? `Wallet error: ${e.message}` : "The wallet did not respond.");
+      if (e.code === -32002) {
+        setConnectError(
+          "Your wallet already has a request waiting for this site. Open MetaMask, approve or dismiss that popup, then click again.",
+        );
+      } else if (e.code === 4001) {
+        setConnectError("You rejected the request in the wallet.");
+      } else {
+        setConnectError(e.message ? `Wallet error: ${e.message}` : "The wallet did not respond.");
+      }
     } finally {
+      inFlight.current = false;
       setConnecting(false);
     }
   }, [wallets]);
@@ -214,6 +228,11 @@ export function ConnectWallet() {
   // truly centres and the dimmer covers the whole screen.
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+  // Close the dialog once a wallet actually answers — not on click, which would
+  // hide the pending request and make failures invisible.
+  useEffect(() => {
+    if (account) setOpen(false);
+  }, [account]);
   const anyProvider = hasProvider || wallets.length > 0;
 
   // Account comes first: a wallet is useless here until there is a user behind it.
@@ -285,11 +304,9 @@ export function ConnectWallet() {
                   wallets.map((w) => (
                     <li key={w.uuid}>
                       <button
-                        onClick={async () => {
-                          await connect(w);
-                          setOpen(false);
-                        }}
-                        className="flex w-full items-center gap-3 rounded-btn border border-line bg-black px-3 py-2.5 text-left transition-colors hover:border-line2"
+                        disabled={connecting}
+                        onClick={() => connect(w)}
+                        className="flex w-full items-center gap-3 rounded-btn border border-line bg-black px-3 py-2.5 text-left transition-colors hover:border-line2 disabled:opacity-60"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={w.icon} alt="" width={22} height={22} className="rounded-[5px]" />
@@ -304,6 +321,13 @@ export function ConnectWallet() {
                 Only wallets installed in this browser appear here. Mobile wallets need
                 WalletConnect, which is not configured yet.
               </p>
+
+              {connecting ? (
+                <p className="mt-2 text-[11px] leading-relaxed text-muted">
+                  Waiting for your wallet. If nothing opened, click the wallet icon in your
+                  browser toolbar.
+                </p>
+              ) : null}
 
               {connectError ? (
                 <p className="mt-2 rounded-[5px] border border-ember/40 bg-ember/10 px-2.5 py-2 text-[11px] leading-relaxed text-ember">
