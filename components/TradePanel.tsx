@@ -597,7 +597,7 @@ export function TradePanel({
               setStatus("");
             }}
             className={`h-8 flex-1 text-[12px] font-medium capitalize transition-colors ${
-              mode === m ? "bg-surface2 text-fg" : "text-dim hover:text-muted"
+              mode === m ? "bg-fg text-black" : "text-dim hover:text-muted"
             }`}
           >
             {m}
@@ -616,7 +616,7 @@ export function TradePanel({
               setStatus("");
             }}
             className={`h-8 flex-1 text-[12px] font-medium capitalize transition-colors ${
-              action === a ? "bg-surface2 text-fg" : "text-dim hover:text-muted"
+              action === a ? "bg-fg text-black" : "text-dim hover:text-muted"
             }`}
           >
             {a}

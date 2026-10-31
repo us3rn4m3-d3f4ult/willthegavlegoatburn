@@ -41,7 +41,8 @@ export function LiveMarket() {
 
   const W = 640;
   const H = 140;
-  const PAD = 6;
+  const PX = 1; // half the stroke width, so the line reaches both edges
+  const PY = 4; // vertical breathing room only
   const values = pts.length > 1 ? pts.map((x) => x.p) : [pct, pct];
 
   // Symmetric around 50% so the midpoint of the chart IS 50%.
@@ -50,9 +51,9 @@ export function LiveMarket() {
   const min = 0.5 - span;
   const max = 0.5 + span;
   const range = max - min || 0.1;
-  const yOf = (v: number) => PAD + (1 - (v - min) / range) * (H - PAD * 2);
+  const yOf = (v: number) => PY + (1 - (v - min) / range) * (H - PY * 2);
   const coords = values.map((v, i) => {
-    const x = PAD + (i / Math.max(1, values.length - 1)) * (W - PAD * 2);
+    const x = PX + (i / Math.max(1, values.length - 1)) * (W - PX * 2);
     return `${x.toFixed(1)},${yOf(v).toFixed(1)}`;
   });
 
@@ -91,43 +92,39 @@ export function LiveMarket() {
         </div>
       </div>
 
-      <section className="panel mt-8 overflow-hidden">
-        <header className="panel-head">
-          <h2 className="panel-title">Odds history</h2>
-        </header>
-        <svg
-          viewBox={`0 0 ${W} ${H}`}
-          className="block h-[140px] w-full"
-          role="img"
-          aria-label="Implied probability over time, centred on 50 percent"
-        >
-          <line
-            x1={PAD}
-            x2={W - PAD}
-            y1={yOf(0.5)}
-            y2={yOf(0.5)}
-            stroke="#2a2a2a"
-            strokeWidth="1"
-            strokeDasharray="2 4"
-          />
-          <polyline
-            points={coords.join(" ")}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-            className={pts.length > 1 ? "text-yes" : "text-dim"}
-          />
-        </svg>
-        <footer className="flex items-center justify-between border-t border-line px-4 py-1.5 text-[10.5px] text-dim">
-          <span className="num">{pts.length > 1 ? label(pts[0].t) : ""}</span>
-          <span className="num">{(pct * 100).toFixed(1)}% now</span>
-          <span className="num">{pts.length > 1 ? label(pts[pts.length - 1].t) : ""}</span>
-        </footer>
-      </section>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="mt-8 block h-[140px] w-full"
+        role="img"
+        aria-label="Implied probability over time, centred on 50 percent"
+      >
+        <line
+          x1={PX}
+          x2={W - PX}
+          y1={yOf(0.5)}
+          y2={yOf(0.5)}
+          stroke="#2a2a2a"
+          strokeWidth="1"
+          strokeDasharray="2 4"
+        />
+        <polyline
+          points={coords.join(" ")}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          className={pts.length > 1 ? "text-yes" : "text-dim"}
+        />
+      </svg>
 
-      <dl className="mt-8 grid grid-cols-2 gap-y-6 border-y border-line py-6 sm:grid-cols-4">
+      <div className="mt-2 flex items-center justify-between text-[10.5px] text-dim">
+        <span className="num">{pts.length > 1 ? label(pts[0].t) : ""}</span>
+        <span className="num">{(pct * 100).toFixed(1)}% now</span>
+        <span className="num">{pts.length > 1 ? label(pts[pts.length - 1].t) : ""}</span>
+      </div>
+
+      <dl className="mt-6 grid grid-cols-2 gap-y-6 border-y border-line py-6 sm:grid-cols-4">
         {stats.map((s, i) => (
           <div key={s.k} className={i > 0 ? "sm:border-l sm:border-line sm:pl-6" : ""}>
             <dt className="eyebrow">{s.k}</dt>

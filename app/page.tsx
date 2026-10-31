@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { MARKET, GOAT_HISTORY } from "@/lib/market";
 import { TradePanel } from "@/components/TradePanel";
 import { Comments } from "@/components/Comments";
@@ -63,12 +62,31 @@ export default function HomePage() {
                 of the {TOTAL} recorded years ended in fire — {BURNED} goats burned.
               </p>
             </div>
-            <Link
-              href="/goat-history"
-              className="mt-5 inline-block text-[12.5px] text-muted transition-colors hover:text-fg"
-            >
-              Every recorded year
-            </Link>
+
+            <details className="group mt-6 border-t border-line pt-4">
+              <summary className="flex cursor-pointer list-none items-center justify-between text-[12.5px] text-muted transition-colors hover:text-fg [&::-webkit-details-marker]:hidden">
+                All {TOTAL} recorded years
+                <span
+                  aria-hidden="true"
+                  className="text-[13px] leading-none text-dim transition-transform duration-200 group-open:rotate-45"
+                >
+                  +
+                </span>
+              </summary>
+              <ul className="mt-2 divide-y divide-line">
+                {GOAT_HISTORY.map((g) => (
+                  <li key={g.year} className="flex items-baseline gap-6 py-2.5 text-[12.5px]">
+                    <span className="num w-10 shrink-0 text-fg">{g.year}</span>
+                    <span className="text-muted">{g.event}</span>
+                    <span
+                      className={`num ml-auto shrink-0 ${g.burned ? "text-yes" : "text-dim"}`}
+                    >
+                      {g.burned ? "burned" : "no fire"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </details>
           </section>
 
           <section className="border-t border-line pt-7">
