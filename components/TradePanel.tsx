@@ -605,7 +605,7 @@ export function TradePanel({
         ))}
       </div>
 
-      <div className="mt-2 grid grid-cols-2 gap-2">
+      <div className="mt-2 flex rounded-btn border border-line p-0.5">
         {(["buy", "sell"] as const).map((a) => (
           <button
             key={a}
@@ -615,10 +615,8 @@ export function TradePanel({
               setAction(a);
               setStatus("");
             }}
-            className={`h-8 border text-[12px] font-medium capitalize transition-colors ${
-              action === a
-                ? "border-line2 bg-surface2 text-fg"
-                : "border-line text-dim hover:text-muted"
+            className={`h-8 flex-1 text-[12px] font-medium capitalize transition-colors ${
+              action === a ? "bg-surface2 text-fg" : "text-dim hover:text-muted"
             }`}
           >
             {a}

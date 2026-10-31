@@ -32,38 +32,53 @@ const STEPS = [
 
 export default function HowItWorksPage() {
   return (
-    <div className="mx-auto max-w-[70ch] py-12">
-      <h1 className="text-[24px] font-semibold tracking-[-0.02em]">How it works</h1>
+    <div className="mx-auto max-w-[74ch] py-14">
+      <h1 className="text-[28px] font-semibold tracking-[-0.02em] text-fg">How it works</h1>
       <p className="mt-3 text-[13.5px] leading-relaxed text-muted">
-        Four things to understand, and then you understand the whole product.
+        Four things to understand, and you understand the whole product.
       </p>
 
-      <ol className="mt-8 space-y-3">
+      <ol className="mt-10 divide-y divide-line border-t border-line">
         {STEPS.map((s) => (
-          <li key={s.n} className="panel p-5">
-            <div className="flex items-baseline gap-3">
-              <span className="num text-[11px] font-semibold text-yes">{s.n}</span>
-              <h2 className="text-[13.5px] font-semibold text-fg">{s.title}</h2>
+          <li key={s.n} className="flex gap-7 py-8">
+            <span className="num w-12 shrink-0 text-[30px] font-semibold leading-none tracking-[-0.03em] text-dim">
+              {s.n}
+            </span>
+            <div>
+              <h2 className="text-[15px] font-semibold text-fg">{s.title}</h2>
+              <p className="mt-2 text-[13px] leading-relaxed text-muted">{s.body}</p>
             </div>
-            <p className="mt-2 text-[12.5px] leading-relaxed text-muted">{s.body}</p>
           </li>
         ))}
       </ol>
 
-      <h2 className="mt-10 text-[13px] font-semibold text-fg">What we do not do</h2>
-      <p className="mt-3 text-[12.5px] text-muted">
-        Every trader needs an account. Accounts are for the leaderboard and comments, not
-        for money: deposits and orders live in the contract, tied to your wallet.
-      </p>
-      <ul className="mt-3 space-y-1.5 text-[12.5px] text-muted">
-        <li>We do not hold your USDC, and there is no account balance to withdraw from.</li>
-        <li>We do not charge a fee, take a cut, or subsidise liquidity.</li>
-        <li>We cannot freeze, reverse or recover a transaction.</li>
-      </ul>
+      <section className="border-t border-line pt-8">
+        <h2 className="text-[15px] font-semibold text-fg">What we do not do</h2>
+        <p className="mt-3 text-[13px] leading-relaxed text-muted">
+          Every trader needs an account. Accounts are for the leaderboard and comments, not
+          for money: deposits and orders live in the contract, tied to your wallet.
+        </p>
+        <ul className="mt-4 divide-y divide-line text-[13px] text-muted">
+          <li className="py-2.5 first:pt-0">
+            We do not hold your USDC, and there is no account balance to withdraw from.
+          </li>
+          <li className="py-2.5">We do not charge a fee, take a cut, or subsidise liquidity.</li>
+          <li className="py-2.5 last:pb-0">
+            We cannot freeze, reverse or recover a transaction.
+          </li>
+        </ul>
+      </section>
 
-      <p className="mt-8 text-[12.5px] text-muted">
-        Read the <Link href="/#resolves" className="text-fg underline decoration-line2 underline-offset-2">resolution rules</Link>{" "}
-        and the <Link href="/risk" className="text-fg underline decoration-line2 underline-offset-2">risk disclosure</Link>.
+      <p className="mt-10 border-t border-line pt-6 text-[13px] text-muted">
+        Read the{" "}
+        <Link href="/#resolves" className="text-fg">
+          resolution rules
+        </Link>{" "}
+        and the{" "}
+        <Link href="/risk" className="text-fg">
+          risk disclosure
+        </Link>
+        .
       </p>
     </div>
   );

@@ -391,14 +391,6 @@ export function ConnectWallet() {
           </svg>
         )}
       </button>
-      <button
-        onClick={disconnect}
-        title="Disconnect"
-        aria-label="Disconnect wallet"
-        className="flex h-8 w-8 items-center justify-center rounded-btn border border-line text-[13px] text-muted transition-colors hover:border-line2 hover:text-fg"
-      >
-        ×
-      </button>
     </div>
   );
 }

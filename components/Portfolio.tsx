@@ -103,8 +103,8 @@ export function Portfolio() {
 
   const tile = (label: string, value: string, note?: string) => (
     <div key={label} className="border border-line px-3 py-2.5">
-      <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-dim">{label}</p>
-      <p className="num mt-1 text-[15px] font-medium text-fg">{value}</p>
+      <p className="eyebrow">{label}</p>
+      <p className="num mt-1.5 text-[15px] font-medium text-fg">{value}</p>
       {note ? <p className="num mt-0.5 text-[10.5px] text-dim">{note}</p> : null}
     </div>
   );
@@ -113,32 +113,28 @@ export function Portfolio() {
     <section className="panel">
       <header className="panel-head">
         <h2 className="panel-title">Your money</h2>
-        <span className="text-[11px] text-dim">
-          {failed ? "reads failed" : snap ? "live from the contract" : "loading"}
-        </span>
       </header>
 
       <div className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-3">
-        {tile("In wallet", usd(snap?.wallet ?? 0), "USDC")}
-        {tile("In market", usd(snap?.inMarket ?? 0), "free to withdraw")}
-        {tile("Total", usd(portfolio), "wallet + market + shares")}
+        {tile("In wallet", usd(snap?.wallet ?? 0))}
+        {tile("In market", usd(snap?.inMarket ?? 0))}
+        {tile("Total", usd(portfolio))}
         {tile(
-          `Yes shares`,
+          "Yes shares",
           (snap?.yes ?? 0).toFixed(2),
-          snap && snap.lockedYes > 0 ? `${snap.lockedYes.toFixed(2)} on sale` : "none on sale",
+          snap && snap.lockedYes > 0 ? `${snap.lockedYes.toFixed(2)} on sale` : undefined,
         )}
         {tile(
-          `No shares`,
+          "No shares",
           (snap?.no ?? 0).toFixed(2),
-          snap && snap.lockedNo > 0 ? `${snap.lockedNo.toFixed(2)} on sale` : "none on sale",
+          snap && snap.lockedNo > 0 ? `${snap.lockedNo.toFixed(2)} on sale` : undefined,
         )}
-        {tile("Open orders", String(snap?.orders ?? 0), "resting in the book")}
+        {tile("Open orders", String(snap?.orders ?? 0))}
       </div>
 
-      <footer className="border-t border-line px-4 py-2.5 text-[11px] leading-relaxed text-dim">
-        Shares are valued at the current book price ({(p * 100).toFixed(1)}¢ yes,{" "}
-        {((1 - p) * 100).toFixed(1)}¢ no). A matching yes and no pair always redeems for $1.00.
-      </footer>
+      {failed ? (
+        <p className="px-4 pb-2 text-[11px] text-dim">Balance read failed. Retrying on reload.</p>
+      ) : null}
     </section>
   );
 }

@@ -56,6 +56,11 @@ export function LiveMarket() {
     return `${x.toFixed(1)},${yOf(v).toFixed(1)}`;
   });
 
+  const label = (t: number) => {
+    const d = new Date(t);
+    return `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+  };
+
   const stats = [
     {
       k: "Volume",
@@ -86,19 +91,6 @@ export function LiveMarket() {
         </div>
       </div>
 
-      <div className="mt-7 flex h-[2px] w-full bg-line">
-        <div className="h-full bg-yes" style={{ width: `${pct * 100}%` }} />
-      </div>
-
-      <dl className="mt-8 grid grid-cols-2 gap-y-6 border-y border-line py-6 sm:grid-cols-4">
-        {stats.map((s, i) => (
-          <div key={s.k} className={i > 0 ? "sm:border-l sm:border-line sm:pl-6" : ""}>
-            <dt className="eyebrow">{s.k}</dt>
-            <dd className="num mt-1.5 text-[14px] font-medium text-fg">{s.v}</dd>
-          </div>
-        ))}
-      </dl>
-
       <section className="panel mt-8 overflow-hidden">
         <header className="panel-head">
           <h2 className="panel-title">Odds history</h2>
@@ -128,7 +120,21 @@ export function LiveMarket() {
             className={pts.length > 1 ? "text-yes" : "text-dim"}
           />
         </svg>
+        <footer className="flex items-center justify-between border-t border-line px-4 py-1.5 text-[10.5px] text-dim">
+          <span className="num">{pts.length > 1 ? label(pts[0].t) : ""}</span>
+          <span className="num">{(pct * 100).toFixed(1)}% now</span>
+          <span className="num">{pts.length > 1 ? label(pts[pts.length - 1].t) : ""}</span>
+        </footer>
       </section>
+
+      <dl className="mt-8 grid grid-cols-2 gap-y-6 border-y border-line py-6 sm:grid-cols-4">
+        {stats.map((s, i) => (
+          <div key={s.k} className={i > 0 ? "sm:border-l sm:border-line sm:pl-6" : ""}>
+            <dt className="eyebrow">{s.k}</dt>
+            <dd className="num mt-1.5 text-[14px] font-medium text-fg">{s.v}</dd>
+          </div>
+        ))}
+      </dl>
 
       {failed ? (
         <p className="mt-3 text-[12px] text-dim">Live data unavailable right now.</p>

@@ -264,7 +264,7 @@ export function AccountView() {
         </div>
       </section>
 
-      <section className="rounded-card border border-yes/25 bg-yes/[0.03] p-5">
+      <section className="panel border-no/25 p-5">
         <h2 className="text-[13px] font-semibold text-fg">Delete account</h2>
         <p className="mt-1.5 text-[12px] leading-relaxed text-muted">
           Removes your email, password hash and every session, permanently. No undo, no
@@ -293,7 +293,7 @@ export function AccountView() {
               <button
                 type="submit"
                 disabled={busy || confirmText.trim() !== "DELETE"}
-                className="h-9 rounded-btn bg-yes px-4 text-[12.5px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-40"
+                className="h-9 rounded-btn bg-no px-4 text-[12.5px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
               >
                 Delete permanently
               </button>

@@ -4,7 +4,6 @@ import { ConnectWallet } from "./WalletProvider";
 
 const NAV = [
   { href: "/how-it-works", label: "How it works" },
-  { href: "/#resolves", label: "Rules" },
   { href: "/goat-history", label: "History" },
 ];
 
