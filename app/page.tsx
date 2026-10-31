@@ -8,6 +8,7 @@ import { Comments } from "@/components/Comments";
 import { LiveMarket } from "@/components/LiveMarket";
 import { OrderBookLive } from "@/components/OrderBookLive";
 import { TradeProvider } from "@/components/TradeProvider";
+import { HowTradingWorks } from "@/components/HowTradingWorks";
 import { fmtCompact, fmtUsd } from "@/lib/format";
 import { FAQ, SITE, faqJsonLd } from "@/lib/seo";
 import type { Metadata } from "next";
@@ -69,7 +70,7 @@ export default function HomePage() {
             </span>
           </div>
 
-          <h1 className="mt-4 max-w-[22ch] text-[26px] font-semibold leading-[1.15] tracking-[-0.02em] text-fg sm:text-[30px]">
+          <h1 className="mt-4 max-w-[40ch] text-[26px] font-semibold leading-[1.15] tracking-[-0.02em] text-fg sm:text-[30px]">
             {MARKET.question}
           </h1>
 
@@ -125,28 +126,6 @@ export default function HomePage() {
 
         <OrderBookLive />
 
-        <section className="rounded-card border border-line bg-surface p-5">
-          <h2 className="text-[13px] font-semibold tracking-tight">How trading works here</h2>
-          <div className="mt-2 max-w-[70ch] space-y-2 text-[12.5px] leading-relaxed text-muted">
-            <p>
-              <span className="font-medium text-fg">Market order</span> — say how much USDC you
-              want to spend (or how many shares you want to sell) and the panel walks the book,
-              cheapest offer first, filling every level it needs. You always see the worst price
-              before you sign.
-            </p>
-            <p>
-              <span className="font-medium text-fg">Limit order</span> — pick a price, post a bid
-              or an ask, and it rests in the book until someone takes it. Click any price in the
-              order book to load it straight into the panel.
-            </p>
-            <p>
-              Your USDC sits in the contract, not with us. Selling needs shares, and shares come
-              from splitting USDC 1:1 into one Yes and one No — the panel does that for you when
-              you need it, and you can withdraw at any time.
-            </p>
-          </div>
-        </section>
-
         <Comments />
 
         <section className="rounded-card border border-line bg-surface p-5">
@@ -169,6 +148,7 @@ export default function HomePage() {
 
       <aside className="h-fit space-y-4 lg:sticky lg:top-24">
         <TradePanel mid={MARKET.mid} />
+        <HowTradingWorks />
       </aside>
       </div>
     </TradeProvider>

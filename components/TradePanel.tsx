@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   BOOK_ABI,
   BOOK_ADDRESS,
@@ -56,6 +57,19 @@ export function TradePanel({ mid: fallbackMid = 0.5 }: { mid?: number }) {
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [fill, setFill] = useState<{ value: number; label: string } | null>(null);
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
+
+  // Signed in = has a site account. A connected wallet alone is not enough.
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/auth/me", { cache: "no-store" })
+      .then((r) => r.json() as Promise<{ user?: unknown }>)
+      .then((d) => alive && setSignedIn(Boolean(d.user)))
+      .catch(() => alive && setSignedIn(null));
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   // Clicking a price in the book loads it here as a limit price.
   useEffect(() => {
@@ -476,13 +490,13 @@ export function TradePanel({ mid: fallbackMid = 0.5 }: { mid?: number }) {
           <label htmlFor="price" className="mt-3 block text-[11px] font-medium text-dim">
             Price
           </label>
-          <div className="mt-1.5 flex items-center gap-2 rounded-btn border border-line bg-black px-3 focus-within:border-line2">
+          <div className="mt-1.5 flex w-full items-center gap-2 rounded-btn border border-line bg-black px-3 focus-within:border-line2">
             <input
               id="price"
               inputMode="decimal"
               value={priceCents}
               onChange={(e) => setPriceCents(e.target.value.replace(/[^0-9.]/g, ""))}
-              className="num h-10 w-full bg-transparent text-[15px] text-fg outline-none placeholder:text-dim"
+              className="num h-11 w-full min-w-0 flex-1 bg-transparent text-[15px] text-fg outline-none placeholder:text-dim"
               placeholder="50.0"
             />
             <span className="text-[13px] font-medium text-dim">¢</span>
@@ -520,13 +534,13 @@ export function TradePanel({ mid: fallbackMid = 0.5 }: { mid?: number }) {
       <label htmlFor="amount" className="mt-3 block text-[11px] font-medium text-dim">
         Amount
       </label>
-      <div className="mt-1.5 flex items-center gap-2 rounded-btn border border-line bg-black px-3 focus-within:border-line2">
+      <div className="mt-1.5 flex w-full items-center gap-2 rounded-btn border border-line bg-black px-3 focus-within:border-line2">
         <input
           id="amount"
           inputMode="decimal"
           value={amount}
           onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
-          className="num h-11 w-full bg-transparent text-[15px] text-fg outline-none placeholder:text-dim"
+          className="num h-11 w-full min-w-0 flex-1 bg-transparent text-[15px] text-fg outline-none placeholder:text-dim"
           placeholder="0.00"
         />
         <span className="text-[13px] font-medium text-dim">{unitLabel}</span>
@@ -640,26 +654,26 @@ export function TradePanel({ mid: fallbackMid = 0.5 }: { mid?: number }) {
         </p>
       ) : null}
 
-      <div className="mt-3 flex items-center justify-between border-t border-line pt-2.5 text-[11px] text-dim">
-        <span className="num">
-          In market: {bal.usdc.toFixed(2)} USDC · Yes {bal.freeYes.toFixed(2)} · No{" "}
-          {bal.freeNo.toFixed(2)}
-        </span>
-        {account && bal.usdc > 0 ? (
+      {account && signedIn === false ? (
+        <p className="mt-2 rounded-[6px] border border-ember/40 bg-ember/10 px-3 py-2 text-[11.5px] leading-relaxed text-ember">
+          This wallet is not signed in.{" "}
+          <Link href="/register" className="font-medium underline underline-offset-2">
+            Create an account
+          </Link>{" "}
+          to trade.
+        </p>
+      ) : null}
+
+      {account && bal.usdc > 0 ? (
+        <p className="mt-2 text-center text-[11px] text-dim">
           <button
             type="button"
             onClick={withdrawAll}
             disabled={busy}
             className="underline decoration-line2 underline-offset-2 hover:text-fg disabled:opacity-40"
           >
-            withdraw
+            Withdraw {bal.usdc.toFixed(2)} USDC
           </button>
-        ) : null}
-      </div>
-
-      {!account ? (
-        <p className="mt-2 text-center text-[11px] leading-relaxed text-dim">
-          Trading never needs an account — connect a wallet and you are done.
         </p>
       ) : null}
     </section>

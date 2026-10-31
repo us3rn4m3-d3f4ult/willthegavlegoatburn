@@ -38,13 +38,11 @@ export const publicClient = createPublicClient({
 });
 
 
-const market = process.env.NEXT_PUBLIC_MARKET_ADDRESS ?? "";
 const usdc = process.env.NEXT_PUBLIC_USDC_ADDRESS ?? "";
 
-/** True when a market has been deployed and pointed at. */
-export const CONFIGURED = /^0x[0-9a-fA-F]{40}$/.test(market) && /^0x[0-9a-fA-F]{40}$/.test(usdc);
+/** True when the USDC token address is known. */
+export const CONFIGURED = /^0x[0-9a-fA-F]{40}$/.test(usdc);
 
-export const MARKET_ADDRESS = market as Address;
 export const USDC_ADDRESS = usdc as Address;
 export const CHAIN_ID_PUBLIC = CHAIN_ID;
 
@@ -206,101 +204,6 @@ export const ERC20_ABI = [
     name: "balanceOf",
     stateMutability: "view",
     inputs: [{ name: "account", type: "address" }],
-    outputs: [{ type: "uint256" }],
-  },
-] as const;
-
-export const AMM_ABI = [
-  { type: "function", name: "yesPrice", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
-  {
-    type: "function",
-    name: "yesReserve",
-    stateMutability: "view",
-    inputs: [],
-    outputs: [{ type: "uint256" }],
-  },
-  {
-    type: "function",
-    name: "noReserve",
-    stateMutability: "view",
-    inputs: [],
-    outputs: [{ type: "uint256" }],
-  },
-  {
-    type: "event",
-    name: "Bought",
-    inputs: [
-      { name: "by", type: "address", indexed: true },
-      { name: "yes", type: "bool", indexed: false },
-      { name: "usdcIn", type: "uint256", indexed: false },
-      { name: "sharesOut", type: "uint256", indexed: false },
-    ],
-  },
-  {
-    type: "event",
-    name: "Sold",
-    inputs: [
-      { name: "by", type: "address", indexed: true },
-      { name: "yes", type: "bool", indexed: false },
-      { name: "sharesIn", type: "uint256", indexed: false },
-      { name: "usdcOut", type: "uint256", indexed: false },
-    ],
-  },
-  {
-    type: "function",
-    name: "yesBalance",
-    stateMutability: "view",
-    inputs: [{ name: "", type: "address" }],
-    outputs: [{ type: "uint256" }],
-  },
-  {
-    type: "function",
-    name: "noBalance",
-    stateMutability: "view",
-    inputs: [{ name: "", type: "address" }],
-    outputs: [{ type: "uint256" }],
-  },
-  {
-    type: "function",
-    name: "usdcBalance",
-    stateMutability: "view",
-    inputs: [{ name: "", type: "address" }],
-    outputs: [{ type: "uint256" }],
-  },
-  {
-    type: "function",
-    name: "quoteBuy",
-    stateMutability: "view",
-    inputs: [{ name: "yes", type: "bool" }, { name: "amount", type: "uint256" }],
-    outputs: [{ type: "uint256" }],
-  },
-  {
-    type: "function",
-    name: "quoteSell",
-    stateMutability: "view",
-    inputs: [{ name: "yes", type: "bool" }, { name: "shares", type: "uint256" }],
-    outputs: [{ type: "uint256" }],
-  },
-  {
-    type: "function",
-    name: "buy",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "yes", type: "bool" },
-      { name: "amount", type: "uint256" },
-      { name: "minSharesOut", type: "uint256" },
-    ],
-    outputs: [{ type: "uint256" }],
-  },
-  {
-    type: "function",
-    name: "sell",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "yes", type: "bool" },
-      { name: "shares", type: "uint256" },
-      { name: "minUsdcOut", type: "uint256" },
-    ],
     outputs: [{ type: "uint256" }],
   },
 ] as const;

@@ -1,41 +1,94 @@
 import { parseAbiItem } from "viem";
 import { dbReady, getPool } from "@/lib/db";
-import { AMM_ABI, CONFIGURED, MARKET_ADDRESS, publicClient } from "@/lib/web3";
+import { BOOK_ABI, BOOK_ADDRESS, BOOK_CONFIGURED, publicClient } from "@/lib/web3";
 import { json } from "@/lib/httpx";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const SAMPLE_MS = 55_000; // at most one stored point per minute
+const MAX_ORDERS = 200; // matches the /api/orders cap
 
-const BOUGHT_EVENT = parseAbiItem(
-  "event Bought(address indexed by, bool yes, uint256 usdcIn, uint256 sharesOut)",
+const FILLED_EVENT = parseAbiItem(
+  "event OrderFilled(uint256 indexed id, address indexed taker, uint256 shares, uint256 usdcAmount)",
 );
 
-export async function GET() {
-  if (!CONFIGURED) return json({ configured: false });
+type Level = { price: number; shares: number; isYes: boolean; isAsk: boolean };
 
-  let price = 0;
+/** Every resting order, read straight from contract state. No indexer needed. */
+async function readBook(): Promise<Level[]> {
+  const count = (await publicClient.readContract({
+    address: BOOK_ADDRESS,
+    abi: BOOK_ABI,
+    functionName: "nextOrderId",
+  })) as bigint;
+
+  const total = Math.min(Number(count) - 1, MAX_ORDERS);
+  if (total < 1) return [];
+
+  const now = Math.floor(Date.now() / 1000);
+  const ids = Array.from({ length: total }, (_, i) => BigInt(i + 1));
+  const raw = await Promise.all(
+    ids.map((id) =>
+      publicClient
+        .readContract({ address: BOOK_ADDRESS, abi: BOOK_ABI, functionName: "orders", args: [id] })
+        .catch(() => null),
+    ),
+  );
+
+  const out: Level[] = [];
+  for (const o of raw) {
+    if (!o) continue;
+    const [, isYes, isAsk, active, expiresAt, shares, price] = o as readonly [
+      string,
+      boolean,
+      boolean,
+      boolean,
+      bigint,
+      bigint,
+      bigint,
+      bigint,
+    ];
+    if (!active || Number(expiresAt) <= now || shares === 0n) continue;
+    out.push({
+      price: Number(price) / 1e18,
+      shares: Number(shares) / 1e6,
+      isYes,
+      isAsk,
+    });
+  }
+  return out;
+}
+
+export async function GET() {
+  if (!BOOK_CONFIGURED) return json({ configured: false });
+
+  let price = 0.5;
   let liquidity = 0;
   try {
-    const [p, y, n] = await Promise.all([
-      publicClient.readContract({ address: MARKET_ADDRESS, abi: AMM_ABI, functionName: "yesPrice" }),
-      publicClient.readContract({ address: MARKET_ADDRESS, abi: AMM_ABI, functionName: "yesReserve" }),
-      publicClient.readContract({ address: MARKET_ADDRESS, abi: AMM_ABI, functionName: "noReserve" }),
-    ]);
-    price = Number(p as bigint) / 1e18;
-    // Pool depth in USDC: half the combined reserves.
-    liquidity = (Number(y as bigint) + Number(n as bigint)) / 2 / 1e6;
+    const levels = await readBook();
+    const asks = levels.filter((l) => l.isYes && l.isAsk).sort((a, b) => a.price - b.price);
+    const bids = levels.filter((l) => l.isYes && !l.isAsk).sort((a, b) => b.price - a.price);
+
+    const bestAsk = asks[0]?.price;
+    const bestBid = bids[0]?.price;
+    if (bestAsk !== undefined && bestBid !== undefined) price = (bestAsk + bestBid) / 2;
+    else if (bestAsk !== undefined) price = bestAsk;
+    else if (bestBid !== undefined) price = bestBid;
+
+    // Everything committed to resting orders, in USDC.
+    liquidity = levels.reduce((s, l) => s + l.shares * l.price, 0);
   } catch {
     return json({ configured: true, error: "rpc_unavailable" }, 503);
   }
 
-  // Volume and traders, scanned forward in 10-block chunks (Alchemy free tier
-  // limit) and persisted so each minute only covers new blocks.
+  // Fills, scanned forward in 10-block chunks (Alchemy free tier limit) and
+  // persisted so each run only covers new blocks. Row 2 is the order book: row 1
+  // holds totals from the retired AMM and must not be mixed in.
   let volume: number | null = null;
   let traders: number | null = null;
   try {
-    const pool = await dbReady() ? getPool() : null;
+    const pool = (await dbReady()) ? getPool() : null;
     const latest = await publicClient.getBlockNumber();
 
     let lastBlock = 0n;
@@ -43,18 +96,17 @@ export async function GET() {
     let seen: string[] = [];
 
     if (pool) {
-      await pool.query(`insert into trade_stats (id) values (1) on conflict (id) do nothing`);
+      await pool.query(`insert into trade_stats (id) values (2) on conflict (id) do nothing`);
       const { rows } = await pool.query(
-        `select last_block, volume::text as volume, traders from trade_stats where id = 1`,
+        `select last_block, volume::text as volume, traders from trade_stats where id = 2`,
       );
       lastBlock = BigInt(rows[0]?.last_block ?? 0);
       sum = Number(rows[0]?.volume ?? 0);
       seen = (rows[0]?.traders as string[]) ?? [];
     }
 
-    // Never look back further than this on the first run.
     const floor = latest > 5_000n ? latest - 5_000n : 0n;
-    let from = lastBlock > 0n && lastBlock > floor ? lastBlock + 1n : floor;
+    const from = lastBlock > 0n && lastBlock > floor ? lastBlock + 1n : floor;
 
     const CHUNK = 10n;
     const CONCURRENCY = 8;
@@ -69,15 +121,15 @@ export async function GET() {
       const results = await Promise.all(
         batch.map(([f, t]) =>
           publicClient
-            .getLogs({ address: MARKET_ADDRESS, event: BOUGHT_EVENT, fromBlock: f, toBlock: t })
+            .getLogs({ address: BOOK_ADDRESS, event: FILLED_EVENT, fromBlock: f, toBlock: t })
             .catch(() => []),
         ),
       );
       for (const logs of results) {
         for (const log of logs) {
-          const args = log.args as { by?: string; usdcIn?: bigint };
-          if (args.usdcIn) sum += Number(args.usdcIn) / 1e6;
-          if (args.by) set.add(args.by.toLowerCase());
+          const args = log.args as { taker?: string; usdcAmount?: bigint };
+          if (args.usdcAmount) sum += Number(args.usdcAmount) / 1e6;
+          if (args.taker) set.add(args.taker.toLowerCase());
         }
       }
     }
@@ -89,7 +141,7 @@ export async function GET() {
       await pool
         .query(
           `update trade_stats set last_block = $1, volume = $2, traders = $3::jsonb, updated_at = now()
-           where id = 1`,
+           where id = 2`,
           [latest.toString(), sum.toString(), JSON.stringify([...set].slice(0, 500))],
         )
         .catch(() => {});
@@ -114,10 +166,7 @@ export async function GET() {
       const rows = await pool
         .query(`select price, at from price_points order by at asc limit 2000`)
         .catch(() => ({ rows: [] as { price: string; at: Date }[] }));
-      series = rows.rows.map((r) => ({
-        t: new Date(r.at).getTime(),
-        p: Number(r.price),
-      }));
+      series = rows.rows.map((r) => ({ t: new Date(r.at).getTime(), p: Number(r.price) }));
     }
   }
 

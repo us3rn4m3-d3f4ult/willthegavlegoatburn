@@ -83,12 +83,6 @@ export function LiveMarket() {
           <span className="font-medium text-yes">Yes {(pct * 100).toFixed(1)}%</span>
           <span className="font-medium text-no">No {((1 - pct) * 100).toFixed(1)}%</span>
         </div>
-
-        <p className="mt-3 text-[11px] leading-relaxed text-dim">
-          Reference price from the AMM pool, which still holds the seeded liquidity. The trade
-          panel works against the order book — once it has bids and asks on both sides, that is
-          where the real price will come from.
-        </p>
       </div>
 
       {/* Chart in a card. 50% sits exactly in the middle. */}
