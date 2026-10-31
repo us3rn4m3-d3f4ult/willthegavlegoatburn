@@ -106,14 +106,22 @@ export default function HomePage() {
 
         <section className="rounded-card border border-line bg-surface p-5">
           <h2 className="text-[13px] font-semibold tracking-tight">Questions people ask</h2>
-          <dl className="mt-3 divide-y divide-line">
+          <div className="mt-3 divide-y divide-line">
             {FAQ.map((item) => (
-              <div key={item.q} className="py-3 first:pt-0 last:pb-0">
-                <dt className="text-[12.5px] font-medium text-fg">{item.q}</dt>
-                <dd className="mt-1.5 text-[12.5px] leading-relaxed text-muted">{item.a}</dd>
-              </div>
+              <details key={item.q} className="group py-3 first:pt-0 last:pb-0">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[12.5px] font-medium text-fg [&::-webkit-details-marker]:hidden">
+                  {item.q}
+                  <span
+                    aria-hidden="true"
+                    className="shrink-0 text-[16px] leading-none text-dim transition-transform duration-200 group-open:rotate-45"
+                  >
+                    +
+                  </span>
+                </summary>
+                <p className="mt-2 text-[12.5px] leading-relaxed text-muted">{item.a}</p>
+              </details>
             ))}
-          </dl>
+          </div>
         </section>
       </div>
 

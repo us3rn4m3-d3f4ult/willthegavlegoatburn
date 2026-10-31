@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/components/useSession";
 import {
@@ -558,19 +557,6 @@ export function TradePanel({
         <span className="text-[13px] font-medium text-dim">{unitLabel}</span>
       </div>
 
-      <div className="mt-2 flex gap-1.5">
-        {(mode === "market" && action === "buy" ? [10, 25, 50, 100] : [10, 50, 100, 500]).map((p) => (
-          <button
-            key={p}
-            type="button"
-            onClick={() => setAmount(String(p))}
-            className="h-7 flex-1 rounded-[5px] border border-line bg-surface2 text-[11.5px] text-muted transition-colors hover:border-line2 hover:text-fg"
-          >
-            {p}
-          </button>
-        ))}
-      </div>
-
       <dl className="mt-3 space-y-1.5 border-t border-line pt-3 text-[12.5px]">
         {mode === "market" ? (
           <>
@@ -663,15 +649,6 @@ export function TradePanel({
           {shortUsdc > 1e-9
             ? `Needs ${shortUsdc.toFixed(2)} more USDC — the panel deposits it for you first.`
             : `Needs ${shortShares.toFixed(2)} more shares — the panel splits USDC into Yes + No first.`}
-        </p>
-      ) : null}
-
-      {signedIn === false ? (
-        <p className="mt-2 text-center text-[11.5px] leading-relaxed text-dim">
-          <Link href="/register" className="underline decoration-line2 underline-offset-2">
-            Register
-          </Link>{" "}
-          to trade.
         </p>
       ) : null}
 
