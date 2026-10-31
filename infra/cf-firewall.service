@@ -1,0 +1,14 @@
+[Unit]
+Description=Restrict origin to Cloudflare ranges (DOCKER-USER)
+Documentation=https://www.cloudflare.com/ips/
+# Docker recreates its own chains on start, so this must run afterwards.
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/cf-only-firewall.sh
+
+[Install]
+WantedBy=multi-user.target

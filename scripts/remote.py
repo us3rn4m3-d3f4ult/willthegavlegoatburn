@@ -16,6 +16,15 @@ from pathlib import Path
 
 import paramiko
 
+# Server output is UTF-8 (systemd prints arrows and similar); Windows consoles are
+# cp1252 by default, which raised UnicodeEncodeError mid-deploy and swallowed the
+# exit code. Reconfigure rather than hope every command is ASCII-only.
+for stream in (sys.stdout, sys.stderr):
+    try:
+        stream.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
+    except (AttributeError, ValueError):
+        pass
+
 ROOT = Path(__file__).resolve().parent.parent
 ENV_FILE = ROOT / ".env.deploy"
 KEY_FILE = Path.home() / ".ssh" / "gavle_deploy"
