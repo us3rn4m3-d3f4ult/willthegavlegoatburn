@@ -234,6 +234,18 @@ export function TradePanel({
         account,
       });
       await publicClient.waitForTransactionReceipt({ hash: h });
+      // An approve can be mined a moment before the node we simulate against sees
+      // the new allowance, which made the deposit fail right after a good approve.
+      for (let i = 0; i < 15; i++) {
+        const now = (await publicClient.readContract({
+          address: USDC_ADDRESS,
+          abi: ERC20_ABI,
+          functionName: "allowance",
+          args: [account, BOOK_ADDRESS],
+        })) as bigint;
+        if (now >= amt) break;
+        await new Promise((r) => setTimeout(r, 1000));
+      }
     }
 
     setStatus(`Deposit ${need.toFixed(2)} USDC into the market…`);
@@ -747,14 +759,6 @@ export function TradePanel({
       {status || connectError ? (
         <p aria-live="polite" className="mt-2 text-center text-[11.5px] leading-relaxed text-muted">
           {status || connectError}
-        </p>
-      ) : null}
-
-      {shortUsdc > 1e-9 || shortShares > 1e-9 ? (
-        <p className="mt-2 text-center text-[11px] leading-relaxed text-dim">
-          {shortUsdc > 1e-9
-            ? `Needs ${shortUsdc.toFixed(2)} more USDC — the panel deposits it for you first.`
-            : `Needs ${shortShares.toFixed(2)} more shares — the panel splits USDC into Yes + No first.`}
         </p>
       ) : null}
 
