@@ -43,3 +43,4 @@ app.tar.gz
 .tools/
 __pycache__/
 _deploy.tar.gz
+infra/.env
