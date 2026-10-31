@@ -652,15 +652,6 @@ export function TradePanel({
             <span className="text-[13px] font-medium text-dim">¢</span>
           </div>
           <div className="mt-1.5 flex gap-1.5">
-            {bestBid !== undefined ? (
-              <button
-                type="button"
-                onClick={() => setPriceCents((bestBid * 100).toFixed(1))}
-                className="h-7 flex-1 rounded-[5px] border border-line text-[11px] text-muted transition-colors hover:border-line2 hover:text-fg"
-              >
-                bid {(bestBid * 100).toFixed(1)}
-              </button>
-            ) : null}
             {bestAsk !== undefined ? (
               <button
                 type="button"
@@ -670,13 +661,6 @@ export function TradePanel({
                 ask {(bestAsk * 100).toFixed(1)}
               </button>
             ) : null}
-            <button
-              type="button"
-              onClick={() => setPriceCents(((isYes ? midPrice : 1 - midPrice) * 100).toFixed(1))}
-              className="h-7 flex-1 rounded-[5px] border border-line text-[11px] text-muted transition-colors hover:border-line2 hover:text-fg"
-            >
-              mid
-            </button>
           </div>
         </>
       ) : null}

@@ -180,12 +180,6 @@ export function OrderBookLive() {
           {bestAsk !== undefined && bestBid !== undefined
             ? `${((bestAsk - bestBid) * 100).toFixed(1)}¢`
             : "—"}
-          <span className="ml-2 text-dim">
-            mid{" "}
-            {bestAsk !== undefined && bestBid !== undefined
-              ? `${(((bestAsk + bestBid) / 2) * 100).toFixed(1)}¢`
-              : "—"}
-          </span>
         </span>
       </div>
 
