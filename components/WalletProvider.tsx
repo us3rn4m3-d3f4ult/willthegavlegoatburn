@@ -10,13 +10,17 @@ type Eip1193 = {
   removeListener?: (event: string, handler: (...args: never[]) => void) => void;
 };
 
+/** An EIP-6963 wallet announcement: name, icon and its own provider. */
+type Announced = { uuid: string; name: string; icon: string; provider: Eip1193 };
+
 type WalletCtx = {
   account: Address | null;
   chainId: number | null;
   hasProvider: boolean;
   wrongChain: boolean;
   connecting: boolean;
-  connect: () => Promise<void>;
+  wallets: Announced[];
+  connect: (target?: Announced) => Promise<void>;
   disconnect: () => void;
   ensureChain: () => Promise<boolean>;
   walletClient: () => WalletClient | null;
@@ -24,9 +28,12 @@ type WalletCtx = {
 
 const Ctx = createContext<WalletCtx | null>(null);
 
+let activeProvider: Eip1193 | null = null;
+
+/** The wallet the user picked, or the legacy injected one. */
 function provider(): Eip1193 | null {
   if (typeof window === "undefined") return null;
-  return (window as unknown as { ethereum?: Eip1193 }).ethereum ?? null;
+  return activeProvider ?? (window as unknown as { ethereum?: Eip1193 }).ethereum ?? null;
 }
 
 export function WalletProvider({ children }: { children: React.ReactNode }) {
@@ -34,6 +41,35 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [chainId, setChainId] = useState<number | null>(null);
   const [hasProvider, setHasProvider] = useState(false);
   const [connecting, setConnecting] = useState(false);
+  const [wallets, setWallets] = useState<Announced[]>([]);
+
+  // EIP-6963: every installed wallet announces itself with a name and icon, so we
+  // can show a real picker instead of guessing what window.ethereum is.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onAnnounce = (event: Event) => {
+      const detail = (event as CustomEvent).detail as
+        | { info?: { uuid: string; name: string; icon: string }; provider?: Eip1193 }
+        | undefined;
+      if (!detail?.info?.uuid || !detail.provider) return;
+      setWallets((prev) =>
+        prev.some((w) => w.uuid === detail.info!.uuid)
+          ? prev
+          : [
+              ...prev,
+              {
+                uuid: detail.info!.uuid,
+                name: detail.info!.name,
+                icon: detail.info!.icon,
+                provider: detail.provider as Eip1193,
+              },
+            ],
+      );
+    };
+    window.addEventListener("eip6963:announceProvider", onAnnounce);
+    window.dispatchEvent(new Event("eip6963:requestProvider"));
+    return () => window.removeEventListener("eip6963:announceProvider", onAnnounce);
+  }, []);
 
   useEffect(() => {
     const eth = provider();
@@ -60,7 +96,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const connect = useCallback(async () => {
+  const connect = useCallback(async (target?: Announced) => {
+    if (target) activeProvider = target.provider;
     const eth = provider();
     if (!eth) return;
     setConnecting(true);
@@ -130,12 +167,13 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       hasProvider,
       wrongChain: account !== null && chainId !== null && chainId !== CHAIN_ID_PUBLIC,
       connecting,
+      wallets,
       connect,
       disconnect,
       ensureChain,
       walletClient,
     }),
-    [account, chainId, hasProvider, connecting, connect, disconnect, ensureChain, walletClient],
+    [account, chainId, hasProvider, connecting, wallets, connect, disconnect, ensureChain, walletClient],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -148,25 +186,82 @@ export function useWallet(): WalletCtx {
 }
 
 export function ConnectWallet() {
-  const { account, connect, disconnect, connecting, hasProvider, wrongChain, ensureChain } =
+  const { account, connect, disconnect, connecting, hasProvider, wrongChain, ensureChain, wallets } =
     useWallet();
   const [copied, setCopied] = useState(false);
+  const [open, setOpen] = useState(false);
+  const anyProvider = hasProvider || wallets.length > 0;
 
-  if (!hasProvider) {
-    return (
-      <span className="hidden text-[11.5px] text-dim sm:inline">No wallet detected</span>
-    );
+  if (!anyProvider) {
+    return <span className="hidden text-[11.5px] text-dim sm:inline">No wallet detected</span>;
   }
 
   if (!account) {
     return (
-      <button
-        onClick={connect}
-        disabled={connecting}
-        className="h-8 rounded-btn bg-fg px-3 text-[12px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-60"
-      >
-        {connecting ? "Connecting…" : "Connect wallet"}
-      </button>
+      <>
+        <button
+          onClick={() => setOpen(true)}
+          disabled={connecting}
+          className="h-8 rounded-btn bg-fg px-3 text-[12px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-60"
+        >
+          {connecting ? "Connecting…" : "Connect wallet"}
+        </button>
+
+        {open ? (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Choose a wallet"
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4"
+            onClick={() => setOpen(false)}
+          >
+            <div
+              className="w-full max-w-[360px] rounded-card border border-line bg-surface p-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between">
+                <h2 className="text-[13px] font-semibold text-fg">Connect a wallet</h2>
+                <button
+                  onClick={() => setOpen(false)}
+                  aria-label="Close"
+                  className="text-[16px] leading-none text-dim hover:text-fg"
+                >
+                  ×
+                </button>
+              </div>
+
+              <ul className="mt-3 space-y-1.5">
+                {wallets.length === 0 ? (
+                  <li className="text-[12px] text-muted">
+                    No wallet extension detected. Install MetaMask, Rabby or Coinbase Wallet.
+                  </li>
+                ) : (
+                  wallets.map((w) => (
+                    <li key={w.uuid}>
+                      <button
+                        onClick={async () => {
+                          await connect(w);
+                          setOpen(false);
+                        }}
+                        className="flex w-full items-center gap-3 rounded-btn border border-line bg-black px-3 py-2.5 text-left transition-colors hover:border-line2"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={w.icon} alt="" width={22} height={22} className="rounded-[5px]" />
+                        <span className="text-[12.5px] font-medium text-fg">{w.name}</span>
+                      </button>
+                    </li>
+                  ))
+                )}
+              </ul>
+
+              <p className="mt-3 text-[11px] leading-relaxed text-dim">
+                Only wallets installed in this browser appear here. Mobile wallets need
+                WalletConnect, which is not configured yet.
+              </p>
+            </div>
+          </div>
+        ) : null}
+      </>
     );
   }
 
