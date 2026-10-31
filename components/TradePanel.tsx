@@ -20,7 +20,7 @@ import { useTradeState } from "@/components/TradeProvider";
 type Mode = "market" | "limit";
 type Action = "buy" | "sell";
 type Book = { asks: Level[]; bids: Level[]; mine: Level[]; trading?: boolean };
-type Balances = { usdc: number; freeYes: number; freeNo: number };
+type Balances = { usdc: number; freeYes: number; freeNo: number; wallet: number };
 
 type Tracked = { id: number; shares: number; price: number; isYes: boolean; isAsk: boolean };
 
@@ -42,6 +42,24 @@ function FillBar({ value, label }: { value: number; label: string }) {
   );
 }
 
+/** Turn contract custom errors into something a person can act on. */
+function explain(e: unknown): string {
+  const m =
+    (e as { shortMessage?: string }).shortMessage ??
+    (e as { message?: string }).message ??
+    "";
+  if (/BadOrder/.test(m)) return "The contract rejected those order details (size, price or expiry).";
+  if (/InsufficientUsdc/.test(m)) return "Not enough USDC credited in the market for that size.";
+  if (/InsufficientShares/.test(m)) return "You do not hold enough free shares to sell that many.";
+  if (/NotTrading/.test(m)) return "Trading is closed.";
+  if (/TooManyOrders/.test(m)) return "Too many open orders from this wallet (the contract allows 32).";
+  if (/SelfTrade/.test(m)) return "You cannot fill your own order.";
+  if (/TransferFailed|ERC20/.test(m)) return "The USDC transfer failed — check balance and allowance.";
+  if (/TIMEOUT/.test(m)) return "No confirmation after two minutes. Check the transaction on Basescan.";
+  if (/user rejected|denied/i.test(m)) return "You rejected the transaction in your wallet.";
+  return m || "Transaction failed.";
+}
+
 export function TradePanel({
   mid: fallbackMid = 0.5,
   anchor = true,
@@ -59,7 +77,7 @@ export function TradePanel({
   const [amount, setAmount] = useState("25");
   const [priceCents, setPriceCents] = useState("50.0");
   const [book, setBook] = useState<Book | null>(null);
-  const [bal, setBal] = useState<Balances>({ usdc: 0, freeYes: 0, freeNo: 0 });
+  const [bal, setBal] = useState<Balances>({ usdc: 0, freeYes: 0, freeNo: 0, wallet: 0 });
   const [expiresAt, setExpiresAt] = useState<bigint | null>(null);
   const [tracked, setTracked] = useState<Tracked[]>([]);
   const [busy, setBusy] = useState(false);
@@ -96,7 +114,7 @@ export function TradePanel({
   const loadBalances = useCallback(async () => {
     if (!account || !BOOK_CONFIGURED) return;
     try {
-      const [usdc, fy, fn] = await Promise.all([
+      const [usdc, fy, fn, wallet] = await Promise.all([
         publicClient.readContract({
           address: BOOK_ADDRESS,
           abi: BOOK_ABI,
@@ -115,11 +133,18 @@ export function TradePanel({
           functionName: "freeShares",
           args: [account, false],
         }),
+        publicClient.readContract({
+          address: USDC_ADDRESS,
+          abi: ERC20_ABI,
+          functionName: "balanceOf",
+          args: [account],
+        }),
       ]);
       setBal({
         usdc: Number(usdc as bigint) / 1e6,
         freeYes: Number(fy as bigint) / 1e6,
         freeNo: Number(fn as bigint) / 1e6,
+        wallet: Number(wallet as bigint) / 1e6,
       });
     } catch {
       /* keep the last known numbers */
@@ -173,6 +198,18 @@ export function TradePanel({
     bestAsk !== undefined && bestBid !== undefined ? (bestAsk + bestBid) / 2 : fallbackMid;
   const shownPrice = isYes ? midPrice : 1 - midPrice;
 
+  /** Wait for a receipt, but not forever: a wallet popup left open used to keep the
+   *  panel on "Working…" indefinitely with no way out. */
+  async function wait(hash: `0x${string}`) {
+    setStatus(`Submitted ${hash.slice(0, 10)}… waiting for confirmation.`);
+    await Promise.race([
+      publicClient.waitForTransactionReceipt({ hash }),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("TIMEOUT")), 120_000),
+      ),
+    ]);
+  }
+
   async function fundUsdc(need: number): Promise<boolean> {
     const w = walletClient();
     if (!w || !account) return false;
@@ -198,15 +235,16 @@ export function TradePanel({
     }
 
     setStatus(`Deposit ${need.toFixed(2)} USDC into the market…`);
-    const h2 = await w.writeContract({
+    // Simulate first: a deposit that would revert should never reach the wallet.
+    const sim = await publicClient.simulateContract({
       address: BOOK_ADDRESS,
       abi: BOOK_ABI,
       functionName: "deposit",
       args: [amt],
-      chain,
       account,
     });
-    await publicClient.waitForTransactionReceipt({ hash: h2 });
+    const h2 = await w.writeContract(sim.request);
+    await wait(h2);
     return true;
   }
 
@@ -276,7 +314,11 @@ export function TradePanel({
 
   async function placeLimit() {
     const w = walletClient();
-    if (!w || !account || !expiresAt) return;
+    if (!expiresAt) {
+      setStatus("Still loading the market's closing time — try again in a moment.");
+      return;
+    }
+    if (!w || !account) return;
 
     if (action === "buy" && shortUsdc > 1e-9) {
       setFill({ value: 0, label: "funding" });
@@ -288,15 +330,16 @@ export function TradePanel({
     }
 
     setStatus(`Placing ${action === "buy" ? "bid" : "ask"} at ${Number(priceCents).toFixed(1)}¢…`);
-    const h = await w.writeContract({
+    // Simulate first so a rejected order reports why instead of costing a failed tx.
+    const sim = await publicClient.simulateContract({
       address: BOOK_ADDRESS,
       abi: BOOK_ABI,
       functionName: action === "buy" ? "placeBid" : "placeAsk",
       args: [isYes, units(value), centsToWei(Number(priceCents)), expiresAt],
-      chain,
       account,
     });
-    await publicClient.waitForTransactionReceipt({ hash: h });
+    const h = await w.writeContract(sim.request);
+    await wait(h);
 
     const next = (await publicClient.readContract({
       address: BOOK_ADDRESS,
@@ -347,6 +390,15 @@ export function TradePanel({
       setStatus("That size is under 1 share — raise the amount.");
       return;
     }
+    // Never start something the wallet cannot pay for. Before this check the panel
+    // would ask to deposit money that wasn't there and the deposit reverted.
+    const spendable = bal.usdc + bal.wallet;
+    if (usdcNeeded - spendable > 1e-9) {
+      setStatus(
+        `That needs $${usdcNeeded.toFixed(2)}. You have $${spendable.toFixed(2)} USDC (${bal.wallet.toFixed(2)} in the wallet, ${bal.usdc.toFixed(2)} in the market). Lower the size or add USDC.`,
+      );
+      return;
+    }
 
     setBusy(true);
     setStatus("");
@@ -355,10 +407,12 @@ export function TradePanel({
       if (mode === "market") await runMarket();
       else await placeLimit();
     } catch (err) {
-      const msg = (err as { shortMessage?: string }).shortMessage ?? "";
-      setStatus(msg ? `Failed: ${msg}` : "Transaction rejected or failed.");
+      setStatus(explain(err));
     } finally {
       setBusy(false);
+      // Always re-read after a failure: the deposit may have gone through even when
+      // the order did not, and the panel has to say so.
+      void loadBalances();
     }
   }
 
