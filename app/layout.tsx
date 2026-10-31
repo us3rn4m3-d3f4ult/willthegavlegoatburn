@@ -40,14 +40,9 @@ export const metadata: Metadata = {
     type: "website",
     siteName: SITE.name,
     locale: SITE.locale,
-    title: SITE.title,
-    description: SITE.description,
-    url: SITE.url,
   },
   twitter: {
     card: "summary_large_image",
-    title: SITE.title,
-    description: SITE.description,
   },
   // Paste the token from Google Search Console → Settings → Ownership verification
   // → HTML tag here, then deploy. Without it you cannot submit the sitemap.
