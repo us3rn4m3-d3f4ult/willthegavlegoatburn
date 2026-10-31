@@ -411,29 +411,33 @@ export function TradePanel({
     const h = await w.writeContract(sim.request);
     await wait(h);
 
-    const next = (await publicClient.readContract({
-      address: BOOK_ADDRESS,
-      abi: BOOK_ABI,
-      functionName: "nextOrderId",
-    })) as bigint;
-
-    setTracked((t) => [
-      { id: Number(next) - 1, shares: value, price: limitPrice, isYes, isAsk: action === "sell" },
-      ...t,
-    ]);
-    setFill({ value: 0, label: "0% filled · resting" });
+    // Confirm FIRST. Nothing below this may be able to swallow the success —
+    // previously a failed nextOrderId read threw here and the button never changed.
     const placed = `${action === "buy" ? "Bid" : "Ask"} placed: ${value.toFixed(2)} ${
       isYes ? "Yes" : "No"
     } at ${Number(priceCents).toFixed(1)}¢, resting in the book.`;
     setStatus(placed);
     setOk(placed);
-    // Refresh the book now, and again shortly after in case the node was still
-    // catching up when the first read went out.
+    setFill({ value: 0, label: "0% filled · resting" });
     bump();
     setTimeout(bump, 1500);
     setTimeout(bump, 4000);
     void loadBalances();
     setTimeout(() => setOk(null), 6000);
+
+    try {
+      const next = (await publicClient.readContract({
+        address: BOOK_ADDRESS,
+        abi: BOOK_ABI,
+        functionName: "nextOrderId",
+      })) as bigint;
+      setTracked((t) => [
+        { id: Number(next) - 1, shares: value, price: limitPrice, isYes, isAsk: action === "sell" },
+        ...t,
+      ]);
+    } catch {
+      // Order tracking is a nicety; the order is already on-chain.
+    }
   }
 
   async function submit() {
