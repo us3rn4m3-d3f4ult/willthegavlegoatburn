@@ -111,8 +111,8 @@ export function TradePanel({
       .catch(() => {});
   }, [account]);
 
-  const loadBalances = useCallback(async () => {
-    if (!account || !BOOK_CONFIGURED) return;
+  const loadBalances = useCallback(async (): Promise<Balances | null> => {
+    if (!account || !BOOK_CONFIGURED) return null;
     try {
       const [usdc, fy, fn, wallet] = await Promise.all([
         publicClient.readContract({
@@ -140,14 +140,16 @@ export function TradePanel({
           args: [account],
         }),
       ]);
-      setBal({
+      const next: Balances = {
         usdc: Number(usdc as bigint) / 1e6,
         freeYes: Number(fy as bigint) / 1e6,
         freeNo: Number(fn as bigint) / 1e6,
         wallet: Number(wallet as bigint) / 1e6,
-      });
+      };
+      setBal(next);
+      return next;
     } catch {
-      /* keep the last known numbers */
+      return null;
     }
   }, [account]);
 
@@ -272,13 +274,20 @@ export function TradePanel({
     const w = walletClient();
     if (!w || !account || !plan || plan.steps.length === 0) return;
 
-    if (action === "buy" && shortUsdc > 1e-9) {
-      setFill({ value: 0, label: "funding" });
-      if (!(await fundUsdc(shortUsdc))) return;
-    }
-    if (action === "sell" && shortShares > 1e-9) {
-      setFill({ value: 0, label: "getting shares" });
-      if (!(await mintShares(shortShares))) return;
+    const fresh = await loadBalances();
+    if (action === "buy") {
+      const short = Math.max(0, usdcNeeded - (fresh?.usdc ?? 0));
+      if (short > 0) {
+        setFill({ value: 0, label: "funding" });
+        if (!(await fundUsdc(short))) return;
+      }
+    } else {
+      const held = isYes ? (fresh?.freeYes ?? 0) : (fresh?.freeNo ?? 0);
+      const short = Math.max(0, value - held);
+      if (short > 0) {
+        setFill({ value: 0, label: "getting shares" });
+        if (!(await mintShares(short))) return;
+      }
     }
 
     let done = 0;
@@ -326,13 +335,22 @@ export function TradePanel({
     }
     if (!w || !account) return;
 
-    if (action === "buy" && shortUsdc > 1e-9) {
-      setFill({ value: 0, label: "funding" });
-      if (!(await fundUsdc(shortUsdc))) return;
-    }
-    if (action === "sell" && shortShares > 1e-9) {
-      setFill({ value: 0, label: "getting shares" });
-      if (!(await mintShares(shortShares))) return;
+    // Re-read balances instead of trusting the 20-second-old poll: a stale reading
+    // makes the panel skip the deposit, and the contract then rejects the order.
+    const fresh = await loadBalances();
+    if (action === "buy") {
+      const short = Math.max(0, usdcNeeded - (fresh?.usdc ?? 0));
+      if (short > 0) {
+        setFill({ value: 0, label: "funding" });
+        if (!(await fundUsdc(short))) return;
+      }
+    } else {
+      const held = isYes ? (fresh?.freeYes ?? 0) : (fresh?.freeNo ?? 0);
+      const short = Math.max(0, value - held);
+      if (short > 0) {
+        setFill({ value: 0, label: "getting shares" });
+        if (!(await mintShares(short))) return;
+      }
     }
 
     setStatus(`Placing ${action === "buy" ? "bid" : "ask"} at ${Number(priceCents).toFixed(1)}¢…`);
