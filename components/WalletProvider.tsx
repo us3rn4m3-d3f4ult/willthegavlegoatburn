@@ -204,7 +204,7 @@ export function useWallet(): WalletCtx {
 }
 
 export function ConnectWallet() {
-  const { account, connect, disconnect, connecting, hasProvider, wrongChain, ensureChain, wallets } =
+  const { account, connect, disconnect, connecting, hasProvider, wrongChain, ensureChain, wallets, connectError } =
     useWallet();
   const signedIn = useSession();
   const [copied, setCopied] = useState(false);
