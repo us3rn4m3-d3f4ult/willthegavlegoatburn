@@ -70,16 +70,26 @@ export async function GET() {
   let liquidity = 0;
   try {
     const levels = await readBook();
-    const asks = levels.filter((l) => l.isYes && l.isAsk).sort((a, b) => a.price - b.price);
-    const bids = levels.filter((l) => l.isYes && !l.isAsk).sort((a, b) => b.price - a.price);
 
-    const bestAsk = asks[0]?.price;
-    const bestBid = bids[0]?.price;
+    // Both outcomes describe the same market, so NO orders have to be mirrored:
+    // a NO bid at p is a YES ask at 1-p, and a NO ask at p is a YES bid at 1-p.
+    // Ignoring that made a book with equal YES and NO bids read as 10% instead of 50%.
+    const bidCandidates = [
+      ...levels.filter((l) => l.isYes && !l.isAsk).map((l) => l.price),
+      ...levels.filter((l) => !l.isYes && l.isAsk).map((l) => 1 - l.price),
+    ];
+    const askCandidates = [
+      ...levels.filter((l) => l.isYes && l.isAsk).map((l) => l.price),
+      ...levels.filter((l) => !l.isYes && !l.isAsk).map((l) => 1 - l.price),
+    ];
+
+    const bestBid = bidCandidates.length > 0 ? Math.max(...bidCandidates) : undefined;
+    const bestAsk = askCandidates.length > 0 ? Math.min(...askCandidates) : undefined;
+
     if (bestAsk !== undefined && bestBid !== undefined) price = (bestAsk + bestBid) / 2;
     else if (bestAsk !== undefined) price = bestAsk;
     else if (bestBid !== undefined) price = bestBid;
 
-    // Everything committed to resting orders, in USDC.
     liquidity = levels.reduce((s, l) => s + l.shares * l.price, 0);
   } catch {
     return json({ configured: true, error: "rpc_unavailable" }, 503);
