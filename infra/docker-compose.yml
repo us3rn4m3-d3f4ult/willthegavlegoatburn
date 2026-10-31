@@ -46,19 +46,28 @@ services:
       - no-new-privileges:true
 
   # ── added once the API/auth service exists (Day 8-11) ──────────
-  # postgres:
-  #   image: postgres:16-alpine
-  #   restart: unless-stopped
-  #   environment:
-  #     POSTGRES_USER: gavle
-  #     POSTGRES_PASSWORD_FILE: /run/secrets/pg_password
-  #     POSTGRES_DB: gavle
-  #   volumes:
-  #     - pgdata:/var/lib/postgresql/data
-  #   # deliberately no ports: the database is never exposed
+  postgres:
+    image: postgres:16-alpine
+    container_name: gavle-db
+    restart: unless-stopped
+    env_file:
+      - ../.env.local
+    environment:
+      POSTGRES_USER: gavle
+      POSTGRES_DB: gavle
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # deliberately no ports: the database is never exposed
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gavle -d gavle"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
 
 volumes:
   caddy_data:
   caddy_config:
   notify_data:
-  # pgdata:
+  pgdata:
