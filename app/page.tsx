@@ -121,10 +121,14 @@ export default function HomePage() {
           </div>
         </section>
 
-        <div className="grid gap-6 sm:grid-cols-2">
-          <OrderBook mid={MARKET.mid} />
-          <RecentTrades />
-        </div>
+        <section className="rounded-card border border-line bg-surface p-5">
+          <h2 className="text-[13px] font-semibold tracking-tight">Recent trades</h2>
+          <p className="mt-2 text-[12px] leading-relaxed text-muted">
+            There is no order book — this is an AMM, so trades are always available and
+            the price moves with the pool. The live trade feed needs an indexer; the public
+            RPC refuses the log query. Nothing here is invented in the meantime.
+          </p>
+        </section>
 
         <Comments />
 
