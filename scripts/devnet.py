@@ -96,8 +96,8 @@ def main() -> int:
             sh([str(CAST), "send", usdc_addr, "mint(address,uint256)", a, "10000000000",
                 "--rpc-url", RPC, "--private-key", KEYS[0]])
 
-        print("deploying GavleGoatMarket ...")
-        out = sh([str(FORGE), "create", "src/GavleGoatMarket.sol:GavleGoatMarket",
+        print("deploying GavleGoatAmm ...")
+        out = sh([str(FORGE), "create", "src/GavleGoatAmm.sol:GavleGoatAmm",
                   "--rpc-url", RPC, "--private-key", KEYS[0], "--broadcast",
                   "--constructor-args", usdc_addr, addrs[0],
                   cfg["BETTING_CLOSES_AT"], cfg["RESOLUTION_DEADLINE"]], cwd=contracts)
@@ -106,22 +106,36 @@ def main() -> int:
             raise RuntimeError(f"could not parse market address:\n{out[-800:]}")
         market_addr = market.group(1)
 
+        print("seeding the pool with 1,000 USDC ...")
+        sh([str(CAST), "send", usdc_addr, "approve(address,uint256)", market_addr, "1000000000",
+            "--rpc-url", RPC, "--private-key", KEYS[0]])
+        sh([str(CAST), "send", market_addr, "seed(uint256)", "1000000000",
+            "--rpc-url", RPC, "--private-key", KEYS[0]])
+        price = sh([str(CAST), "call", market_addr, "yesPrice()(uint256)",
+                    "--rpc-url", RPC]).strip()
+
         print("\n" + "=" * 66)
         print("  DEVNET READY  (fake chain, fake money, real contracts)")
         print("=" * 66)
         print(f"  RPC          {RPC}")
         print(f"  Chain ID     {CHAIN_ID}")
         print(f"  USDC         {usdc_addr}   (10,000 each)")
-        print(f"  Market       {market_addr}")
+        print(f"  AMM market   {market_addr}")
+        print(f"  YES price    {int(price.split()[0]) / 1e16:.2f}%  (starts at 50%)")
         print("\n  MetaMask -> Add network manually:")
         print(f"    name: Devnet   rpc: {RPC}   chain: {CHAIN_ID}   symbol: ETH")
         print("\n  Import accounts (devnet keys, never use on a real network):")
         for i, (k, a) in enumerate(zip(KEYS, addrs)):
             print(f"    [{i}] {a}\n        {k}")
-        print("\n  Next: put the market address in .env.local as")
-        print(f"    NEXT_PUBLIC_MARKET_ADDRESS={market_addr}")
-        print(f"    NEXT_PUBLIC_USDC_ADDRESS={usdc_addr}")
-        print(f"    NEXT_PUBLIC_RPC_URL={RPC}")
+        print("\n  Try a trade with account [1] (buy 100 USDC of YES):")
+        print(f"    cast send {usdc_addr} \"approve(address,uint256)\" {market_addr} 1000000000 \\")
+        print(f"      --rpc-url {RPC} --private-key {KEYS[1]}")
+        print(f"    cast send {market_addr} \"buy(bool,uint256,uint256)\" true 100000000 0 \\")
+        print(f"      --rpc-url {RPC} --private-key {KEYS[1]}")
+        print(f"    cast call {market_addr} \"yesPrice()(uint256)\" --rpc-url {RPC}")
+        print("\n  Sell back:")
+        print(f"    cast send {market_addr} \"sell(bool,uint256,uint256)\" true <shares> 0 \\")
+        print(f"      --rpc-url {RPC} --private-key {KEYS[1]}")
         print("=" * 66 + "\n")
 
         if once:
