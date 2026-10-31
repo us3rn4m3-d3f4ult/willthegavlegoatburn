@@ -49,20 +49,30 @@ ufw reload >/dev/null 2>&1
 echo "ufw rules matching 80,443: $(ufw status | grep -c '80,443')"
 
 echo "== DOCKER-USER: allow Cloudflare, drop everything else =="
+# Scope every rule to the Docker subnets. DOCKER-USER also sees *outbound*
+# container traffic, so an unscoped `-p tcp --dports 443 -j DROP` silently kills
+# the containers' own HTTPS calls (this file did exactly that once: the site kept
+# serving HTML while every RPC read failed with "fetch failed").
+SUBNETS=$(docker network inspect $(docker network ls -q) --format '{{range .IPAM.Config}}{{println .Subnet}}{{end}}' 2>/dev/null | grep -v '^$' | sort -u)
+if [ -z "$SUBNETS" ]; then
+  echo "ERROR: no docker subnets found; refusing to write an unscoped DROP" >&2
+  exit 1
+fi
+echo "docker subnets: $(echo $SUBNETS | tr '\n' ' ')"
+
 iptables -F DOCKER-USER 2>/dev/null
 iptables -A DOCKER-USER -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN
 for r in $CF; do
-  case "$r" in
-    *:*) ip6tables -A DOCKER-USER -s "$r" -p tcp -m multiport --dports 80,443 -j RETURN 2>/dev/null
-         ip6tables -A DOCKER-USER -s "$r" -p udp -m multiport --dports 443 -j RETURN 2>/dev/null ;;
-    *)   iptables -A DOCKER-USER -s "$r" -p tcp -m multiport --dports 80,443 -j RETURN
-         iptables -A DOCKER-USER -s "$r" -p udp -m multiport --dports 443 -j RETURN ;;
-  esac
+  case "$r" in *:*) continue ;; esac
+  for s in $SUBNETS; do
+    iptables -A DOCKER-USER -s "$r" -d "$s" -p tcp -m multiport --dports 80,443 -j RETURN
+    iptables -A DOCKER-USER -s "$r" -d "$s" -p udp -m multiport --dports 443 -j RETURN
+  done
 done
-iptables -A DOCKER-USER -p tcp -m multiport --dports 80,443 -j DROP
-iptables -A DOCKER-USER -p udp -m multiport --dports 443 -j DROP
-ip6tables -A DOCKER-USER -p tcp -m multiport --dports 80,443 -j DROP 2>/dev/null
-ip6tables -A DOCKER-USER -p udp -m multiport --dports 443 -j DROP 2>/dev/null
+for s in $SUBNETS; do
+  iptables -A DOCKER-USER -d "$s" -p tcp -m multiport --dports 80,443 -j DROP
+  iptables -A DOCKER-USER -d "$s" -p udp -m multiport --dports 443 -j DROP
+done
 
 echo "ipv4 rules: $(iptables -S DOCKER-USER | wc -l)"
 echo "last rule:  $(iptables -S DOCKER-USER | tail -1)"

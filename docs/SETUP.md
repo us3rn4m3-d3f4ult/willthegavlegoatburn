@@ -181,6 +181,18 @@ curl -sk --max-time 5 --resolve willthegavlegoatburn.com:443:$ORIGIN_IP \
   https://willthegavlegoatburn.com/ -o /dev/null -w '%{http_code}\n'   # expect 000
 ```
 
+**Also check that egress still works**, i.e. that the site's own RPC calls are
+not being dropped by your own rules:
+
+```bash
+curl -s https://willthegavlegoatburn.com/api/orders | head -c 80   # JSON, not a 503
+```
+
+`DOCKER-USER` sees **forwarded** traffic, outbound included. An unscoped
+`-p tcp --dports 443 -j DROP` there will silently kill the containers' HTTPS
+calls to the RPC while the HTML keeps serving — the page looks fine and every
+read returns `rpc_unavailable`. All rules must be scoped with `-d <docker subnet>`.
+
 ---
 
 ## 3. Email — `contact@` plus a sender for verification/reset
