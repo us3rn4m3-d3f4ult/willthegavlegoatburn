@@ -37,7 +37,7 @@ function Row({
     >
       <span
         aria-hidden="true"
-        className={`absolute inset-y-0 right-0 ${tone === "ask" ? "bg-no/[0.08]" : "bg-yes/[0.08]"}`}
+        className={`absolute inset-y-0 right-0 ${tone === "ask" ? "bg-no/10" : "bg-yes/10"}`}
         style={{ width: `${pct}%` }}
       />
       <span className={`num relative font-medium ${tone === "ask" ? "text-no" : "text-yes"}`}>
