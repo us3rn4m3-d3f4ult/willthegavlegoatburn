@@ -11,9 +11,11 @@ passing locally. Auth API and indexer are next.
 ## Contracts
 
 ```bash
-# Foundry is vendored locally in .tools/ (gitignored)
+# Foundry is vendored locally in .tools/ (gitignored), so a fresh clone needs it:
+#   curl -L https://foundry.paradigm.xyz | bash   # then restart the shell
 cd contracts
-../path/to/forge test -vv
+forge install foundry-rs/forge-std   # contracts/lib/ is gitignored
+forge test -vv
 ```
 
 `GavleGoatMarket.sol` — one market, one question, USDC, **zero fees**:
