@@ -31,6 +31,20 @@ const PUBLIC_EXACT = new Set([
 
 function contentSecurityPolicy(isDev: boolean): string {
   const scriptExtra = isDev ? " 'unsafe-eval'" : "";
+
+  // The browser talks to the RPC directly, so its origin must be allowed or every
+  // client-side read (balances, quotes, expiry) fails silently. Derived from the
+  // build-time env rather than hardcoded, so switching RPC providers cannot leave
+  // this list stale — which is exactly what happened when we moved to Alchemy.
+  const rpcOrigin = (() => {
+    const raw = process.env.NEXT_PUBLIC_RPC_URL ?? "";
+    try {
+      return raw ? new URL(raw).origin : "";
+    } catch {
+      return "";
+    }
+  })();
+
   return [
     "default-src 'self'",
     `script-src 'self' 'unsafe-inline'${scriptExtra}`,
@@ -41,12 +55,15 @@ function contentSecurityPolicy(isDev: boolean): string {
     // here is how wallet-drainer scripts get to phone home.
     [
       "connect-src 'self'",
+      rpcOrigin,
       "https://sepolia.base.org",
       "https://mainnet.base.org",
       "https://*.walletconnect.com",
       "wss://*.walletconnect.com",
       "https://*.coinbase.com",
-    ].join(" "),
+    ]
+      .filter(Boolean)
+      .join(" "),
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",

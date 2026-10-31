@@ -14,9 +14,13 @@ export function json(
 }
 
 export function clientIp(req: Request): string {
+  // X-Real-IP is written by our own proxy from {client_ip}, which only believes
+  // forwarding headers when the TCP peer is Cloudflare (trusted_proxies). Headers a
+  // client can set freely — CF-Connecting-IP above all — are therefore a fallback
+  // for local runs, never the primary key for rate limiting.
   return (
-    req.headers.get("cf-connecting-ip")?.trim() ||
     req.headers.get("x-real-ip")?.trim() ||
+    req.headers.get("cf-connecting-ip")?.trim() ||
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     "unknown"
   );

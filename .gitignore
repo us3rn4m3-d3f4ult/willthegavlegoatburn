@@ -44,3 +44,7 @@ app.tar.gz
 __pycache__/
 _deploy.tar.gz
 infra/.env
+
+# generated signup dumps — these hold real email addresses, never commit them
+*.jsonl
+data/

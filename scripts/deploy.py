@@ -83,6 +83,16 @@ def main() -> int:
             )
         steps += [
             f"cd {REMOTE_DIR}/infra && docker compose up -d --remove-orphans",
+            # The Caddyfile is a bind mount, so compose never recreates Caddy when only
+            # that file changes: the container keeps serving its old config (and even its
+            # old inode) forever. Validate the NEW file in a throwaway container first —
+            # a bad config would otherwise crash-loop and take the whole site down — then
+            # restart so the new file is actually mounted.
+            f"docker run --rm -v {REMOTE_DIR}/infra/Caddyfile:/c/Caddyfile "
+            f"-v {REMOTE_DIR}/infra/certs:/certs caddy:2-alpine "
+            f"caddy validate --adapter caddyfile --config /c/Caddyfile >/dev/null 2>&1 "
+            f"&& docker restart gavle-caddy >/dev/null "
+            f"|| echo 'WARN: Caddyfile invalid — old config left running'",
             "sleep 4",
             f"docker compose -f {REMOTE_DIR}/infra/docker-compose.yml ps",
         ]
