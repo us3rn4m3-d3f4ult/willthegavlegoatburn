@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-type Comment = { id: string; body: string; at: string; handle: string };
+type Comment = { id: string; body: string; at: string; name: string; yes: number; no: number };
 
 const ERRORS: Record<string, string> = {
   language: "That contains language we don't allow here.",
@@ -138,8 +138,14 @@ export function Comments() {
           ) : (
             list.map((c) => (
               <li key={c.id} className="py-3">
-                <div className="flex items-center gap-2 text-[11px] text-dim">
-                  <span className="font-mono text-[10.5px] text-muted">{c.handle}</span>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-dim">
+                  <span className="font-medium text-muted">{c.name}</span>
+                  <span>·</span>
+                  <span className="num">
+                    <span className={c.yes > 0 ? "text-yes" : ""}>{c.yes.toFixed(2)} YES</span>
+                    <span className="mx-1 text-line2">/</span>
+                    <span className={c.no > 0 ? "text-no" : ""}>{c.no.toFixed(2)} NO</span>
+                  </span>
                   <span>·</span>
                   <span>{ago(c.at)}</span>
                 </div>

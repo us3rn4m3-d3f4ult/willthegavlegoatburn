@@ -5,7 +5,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Goat history",
   description:
-    "Sixty years of the Gävle goat: which years it burned, which years it survived, and the years it was destroyed by something other than fire.",
+    "Sixty years of the GÃ¤vle goat: which years it burned, which years it survived, and the years it was destroyed by something other than fire.",
   alternates: { canonical: "/goat-history" },
 };
 
@@ -41,7 +41,7 @@ export default function GoatHistoryPage() {
 
       <p className="mt-8 text-[12px] leading-relaxed text-dim">
         Summary only, not a complete record. Sources: public reporting by SVT, Aftonbladet and
-        others. See the <Link href="/rules" className="underline decoration-line2 underline-offset-2">resolution rules</Link>{" "}
+        others. See the <Link href="/#resolves" className="underline decoration-line2 underline-offset-2">resolution rules</Link>{" "}
         for the full definition used by this market.
       </p>
     </div>

@@ -39,7 +39,7 @@ function RecentTrades() {
               {t.side === "YES" ? "Buy Yes" : "Buy No"}
             </span>
             <span className="num text-muted">
-              {(t.price * 100).toFixed(1)}¢ · {fmtCompact(t.size)}
+              {(t.price * 100).toFixed(1)}c - {fmtCompact(t.size)}
             </span>
             <span className="num w-9 text-right text-dim">{t.ago}</span>
           </li>
@@ -53,14 +53,13 @@ export default function HomePage() {
   return (
     <div className="grid gap-6 py-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8">
       <div className="min-w-0 space-y-6">
-        {/* ── market header ───────────────────────────────── */}
         <section className="rounded-card border border-line bg-surface p-6">
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-[4px] border border-yes/30 bg-yes/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-yes">
               Live
             </span>
             <span className="rounded-[4px] border border-line px-2 py-1 text-[10px] font-medium text-muted">
-              Base · USDC
+              Base - USDC
             </span>
           </div>
 
@@ -82,31 +81,6 @@ export default function HomePage() {
 
         <PriceChart />
 
-        <div className="grid gap-6 sm:grid-cols-2">
-          <OrderBook mid={MARKET.mid} />
-          <RecentTrades />
-        </div>
-
-        {/* ── rules strip ─────────────────────────────────── */}
-        <section className="rounded-card border border-line bg-surface p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-[13px] font-semibold tracking-tight">How this resolves</h2>
-            <Link
-              href="/rules"
-              className="text-[12px] text-muted underline decoration-line2 underline-offset-2 hover:text-fg"
-            >
-              Full rules
-            </Link>
-          </div>
-          <p className="mt-2.5 max-w-[70ch] text-[12.5px] leading-relaxed text-muted">
-            <span className="font-medium text-fg">Yes</span> if the goat is set on fire and has to
-            come down before its scheduled removal. <span className="font-medium text-fg">No</span>{" "}
-            if it survives — or is destroyed any other way. A car (2021) or a storm (2025) is not a
-            fire. Confirmed by two of three published sources.
-          </p>
-        </section>
-
-        {/* ── history teaser ──────────────────────────────── */}
         <section className="rounded-card border border-line bg-surface p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-[13px] font-semibold tracking-tight">The goat has a history</h2>
@@ -122,16 +96,43 @@ export default function HomePage() {
               <li key={g.year} className="text-muted">
                 <span className="num font-medium text-fg">{g.year}</span>{" "}
                 {g.burned ? (
-                  <span className="text-yes">· burned</span>
+                  <span className="text-yes">- burned</span>
                 ) : (
-                  <span className="text-no">· not fire</span>
+                  <span className="text-no">- not fire</span>
                 )}
               </li>
             ))}
           </ul>
         </section>
 
-        {/* ── FAQ (also emitted as FAQPage structured data) ── */}
+        <section
+          id="resolves"
+          className="scroll-mt-24 rounded-card border border-line bg-surface p-5"
+        >
+          <h2 className="text-[13px] font-semibold tracking-tight">How this resolves</h2>
+          <div className="mt-2.5 max-w-[70ch] space-y-2 text-[12.5px] leading-relaxed text-muted">
+            <p>
+              <span className="font-medium text-fg">Yes</span> if the goat catches fire at any
+              point - a scorched leg or the whole thing to the ground, deliberate or accidental.
+              It does not have to be destroyed.
+            </p>
+            <p>
+              <span className="font-medium text-fg">No</span> if it never burns. Destroyed some
+              other way - hit by a car in 2021, blown over by a storm in 2025 - is{" "}
+              <span className="font-medium text-fg">No</span>, because nothing burned.
+            </p>
+            <p>
+              If no goat goes up at all, the market voids and every share is refunded at half
+              price, permissionlessly.
+            </p>
+          </div>
+        </section>
+
+        <div className="grid gap-6 sm:grid-cols-2">
+          <OrderBook mid={MARKET.mid} />
+          <RecentTrades />
+        </div>
+
         <section className="rounded-card border border-line bg-surface p-5">
           <h2 className="text-[13px] font-semibold tracking-tight">Questions people ask</h2>
           <dl className="mt-3 divide-y divide-line">
@@ -152,20 +153,9 @@ export default function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd()) }}
       />
 
-      {/* ── sticky trade column ───────────────────────────── */}
       <aside className="h-fit space-y-4 lg:sticky lg:top-24">
         <TradePanel mid={MARKET.mid} />
-        <div className="rounded-card border border-line bg-surface p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-dim">
-            Resolution source
-          </p>
-          <p className="mt-2 text-[12px] leading-relaxed text-muted">{MARKET.resolutionLabel}</p>
-          <Link href="/rules" className="mt-2.5 inline-block text-[12px] text-yes hover:underline">
-            Read the rules →
-          </Link>
-        </div>
       </aside>
     </div>
   );
 }
-

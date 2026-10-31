@@ -19,6 +19,20 @@ create table if not exists users (
   created_at    timestamptz not null default now()
 );
 
+-- Added after the first release: accounts now have a public username. Kept as a
+-- separate ALTER so existing rows survive.
+alter table users add column if not exists username text;
+create unique index if not exists users_username_lower_idx on users (lower(username));
+
+-- Positions are mirrored from the chain by the indexer. Until that exists every
+-- row here is zero, which is the truthful answer: nobody holds shares yet.
+create table if not exists positions (
+  user_id    uuid primary key references users(id) on delete cascade,
+  yes_shares numeric not null default 0,
+  no_shares  numeric not null default 0,
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists sessions (
   token_hash text primary key,
   user_id    uuid not null references users(id) on delete cascade,

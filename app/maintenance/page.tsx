@@ -6,7 +6,7 @@ import { NotifyForm } from "@/components/NotifyForm";
 export const metadata: Metadata = {
   title: "Opening 1 November 2026",
   description:
-    "Trading on the 2026 Gävle goat market opens on 1 November 2026. Leave your email and we'll tell you the moment it goes live.",
+    "Trading on the 2026 GÃ¤vle goat market opens on 1 November 2026. Leave your email and we'll tell you the moment it goes live.",
   robots: { index: true, follow: true },
   alternates: { canonical: "/maintenance" },
 };
@@ -26,9 +26,9 @@ export default function MaintenancePage() {
       </h1>
 
       <p className="mt-4 max-w-[52ch] text-[13.5px] leading-relaxed text-muted">
-        The Gävle goat goes up on 29 November. Between now and then the market is
+        The GÃ¤vle goat goes up on 29 November. Between now and then the market is
         closed while we finish the order book. Leave your email and we&rsquo;ll send
-        one message the moment it opens — nothing else, ever.
+        one message the moment it opens â€” nothing else, ever.
       </p>
 
       <div className="mt-7 rounded-card border border-line bg-surface p-5">
@@ -51,7 +51,7 @@ export default function MaintenancePage() {
 
       <p className="mt-8 text-[12px] leading-relaxed text-dim">
         Meanwhile, read{" "}
-        <Link href="/rules" className="text-fg underline decoration-line2 underline-offset-2">
+        <Link href="/#resolves" className="text-fg underline decoration-line2 underline-offset-2">
           how this resolves
         </Link>
         ,{" "}

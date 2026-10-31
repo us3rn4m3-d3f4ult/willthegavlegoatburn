@@ -4,7 +4,6 @@ import { SITE } from "@/lib/seo";
 const ROUTES: { path: string; priority: number; freq: "daily" | "weekly" | "monthly" | "yearly" }[] = [
   { path: "/", priority: 1.0, freq: "daily" },
   { path: "/goat-history", priority: 0.9, freq: "monthly" },
-  { path: "/rules", priority: 0.9, freq: "weekly" },
   { path: "/how-it-works", priority: 0.7, freq: "monthly" },
   { path: "/activity", priority: 0.6, freq: "daily" },
   { path: "/status", priority: 0.3, freq: "weekly" },

@@ -11,6 +11,11 @@ const MESSAGES: Record<string, string> = {
   password_too_long: "That password is too long.",
   password_too_guessable: "That password is too easy to guess.",
   email_taken: "An account with that email already exists.",
+  username_invalidChanged: "",
+  username_invalid: "3–20 characters: letters, numbers, underscore, starting with a letter.",
+  username_taken: "That username is already taken.",
+  username_reserved: "That username is reserved.",
+  username_language: "Pick a different username.",
   invalid_credentials: "Wrong email or password.",
   rate_limited: "Too many attempts. Wait a minute and try again.",
   accounts_unavailable: "Accounts are temporarily unavailable. Try again shortly.",
@@ -22,6 +27,7 @@ const MESSAGES: Record<string, string> = {
 export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -39,7 +45,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       const res = await fetch(`/api/auth/${isRegister ? "register" : "login"}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, ...(isRegister ? { username } : {}) }),
       });
       const data = (await res.json()) as {
         ok?: boolean;
@@ -78,6 +84,30 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
 
   return (
     <form onSubmit={onSubmit} className="space-y-3">
+      {isRegister ? (
+        <div>
+          <label htmlFor="username" className="block text-[11px] font-medium text-dim">
+            Username
+          </label>
+          <input
+            id="username"
+            name="username"
+            required
+            minLength={3}
+            maxLength={20}
+            autoComplete="username"
+            pattern="[a-zA-Z][a-zA-Z0-9_]{2,19}"
+            value={username}
+            onChange={(e) => {
+              setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ""));
+              if (error) setError("");
+            }}
+            className="mt-1.5 h-11 w-full rounded-btn border border-line bg-black px-3.5 text-[13.5px] text-fg outline-none transition-colors placeholder:text-dim focus:border-line2"
+            placeholder="shown publicly next to your comments"
+          />
+        </div>
+      ) : null}
+
       <div>
         <label htmlFor="email" className="block text-[11px] font-medium text-dim">
           Email

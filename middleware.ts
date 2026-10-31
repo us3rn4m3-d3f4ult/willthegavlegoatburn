@@ -20,7 +20,6 @@ const PUBLIC_EXACT = new Set([
   "/risk",
   "/cookies",
   "/legal",
-  "/rules",
   "/goat-history",
   "/login",
   "/register",

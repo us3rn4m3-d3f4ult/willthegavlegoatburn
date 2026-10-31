@@ -11,7 +11,7 @@ export default function TermsPage() {
     <LegalShell
       title="Terms of use"
       updated="30 October 2026"
-      intro="These terms cover a non-custodial product: we never hold your funds, we charge no fee, and no transaction can be reversed — by us or by anyone else."
+      intro="These terms cover a non-custodial product: we never hold your funds, we charge no fee, and no transaction can be reversed â€” by us or by anyone else."
     >
       <h2>1. Eligibility</h2>
       <p>
@@ -31,14 +31,14 @@ export default function TermsPage() {
       <h2>3. No custody, no recovery</h2>
       <p>
         Your position is held by a smart contract and is controlled only by the wallet that signed
-        the transaction. If you lose access to that wallet, nobody — including us — can recover your
+        the transaction. If you lose access to that wallet, nobody â€” including us â€” can recover your
         position. If you send funds to the wrong address or the wrong contract, the transfer is
         final.
       </p>
 
       <h2>4. Resolution</h2>
       <p>
-        Markets resolve according to the published <a href="/rules">resolution rules</a>, from the
+        Markets resolve according to the published <a href="/#resolves">resolution rules</a>, from the
         listed public sources. Resolution is proposed on-chain and finalises after a timelock, during
         which the proposal is publicly visible. If a market cannot be resolved by its deadline, every
         position can be refunded by anyone calling the void function.
@@ -76,7 +76,7 @@ export default function TermsPage() {
       <h2>9. Intellectual property</h2>
       <p>
         The name, design and copy of this site are ours. The smart contracts are intended to be
-        open-source. We are not affiliated with Gävle kommun, Visit Gävle, the Southern Merchants or
+        open-source. We are not affiliated with GÃ¤vle kommun, Visit GÃ¤vle, the Southern Merchants or
         any official body, and no official imagery is used.
       </p>
 

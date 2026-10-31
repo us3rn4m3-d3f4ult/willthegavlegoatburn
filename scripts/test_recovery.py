@@ -53,7 +53,8 @@ def main() -> int:
     email = f"rec.{secrets.token_hex(4)}@example.com"
     pw1, pw2, pw3 = "first-password-111", "second-password-222", "third-password-333"
 
-    s, b = request("POST", "/api/auth/register", {"email": email, "password": pw1})
+    uname = "u" + secrets.token_hex(4)
+    s, b = request("POST", "/api/auth/register", {"username": uname, "email": email, "password": pw1})
     codes = b.get("recoveryCodes") or []
     check("register returns 10 codes", s == 200 and len(codes) == 10, f"{s} n={len(codes)}")
     if len(codes) != 10:

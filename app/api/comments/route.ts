@@ -17,7 +17,17 @@ const WINDOW = "10 minutes";
 
 const LIMIT = 50;
 
-type Row = { id: string; body: string; created_at: Date; user_id: string };
+type Row = {
+  id: string;
+  body: string;
+  created_at: Date;
+  user_id: string;
+  username: string | null;
+  yes_shares: string;
+  no_shares: string;
+};
+
+type Cursor = { next: string | null };
 
 /** Stable, non-reversible display handle. Emails are never exposed. */
 function handle(userId: string): string {
@@ -39,10 +49,14 @@ export async function GET(req: Request) {
 
   const { rows } = await pool
     .query(
-      `select id, body, created_at, user_id
-         from comments
-        where hidden = false
-        order by created_at desc
+      `select c.id, c.body, c.created_at, c.user_id, u.username,
+              coalesce(p.yes_shares, 0)::text as yes_shares,
+              coalesce(p.no_shares, 0)::text  as no_shares
+         from comments c
+         join users u on u.id = c.user_id
+         left join positions p on p.user_id = c.user_id
+        where c.hidden = false
+        order by c.created_at desc
         limit $1`,
       [LIMIT],
     )
@@ -55,7 +69,9 @@ export async function GET(req: Request) {
       id: r.id,
       body: r.body,
       at: r.created_at.toISOString(),
-      handle: handle(r.user_id),
+      name: r.username ?? handle(r.user_id),
+      yes: Number(r.yes_shares),
+      no: Number(r.no_shares),
     })),
   });
 }
@@ -105,7 +121,9 @@ export async function POST(req: Request) {
         id: row.id,
         body: row.body,
         at: row.created_at.toISOString(),
-        handle: handle(row.user_id),
+        name: user.username ?? handle(user.id),
+        yes: 0,
+        no: 0,
       },
     },
     201,

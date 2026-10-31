@@ -56,6 +56,11 @@ def main() -> int:
         print("upload  : ok")
 
         steps = [
+            # tar -x only adds and overwrites; it never deletes. Without this the
+            # server keeps building files that were deleted locally (a removed
+            # page stays live forever). Only code dirs are removed — .env.local,
+            # infra/certs and data are preserved.
+            f"cd {REMOTE_DIR} && rm -rf app components lib docs scripts contracts",
             f"cd {REMOTE_DIR} && tar -xzf _deploy.tar.gz && rm -f _deploy.tar.gz",
             f"chown -R deploy:deploy {REMOTE_DIR}",
         ]

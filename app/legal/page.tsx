@@ -37,10 +37,10 @@ export default function OperatorPage() {
 
       <h2 id="complaints">Complaints</h2>
       <p>
-        If something has gone wrong — a resolution you think is wrong, a bug, an order that behaved
-        unexpectedly — email us with the transaction hash and a description. Resolution complaints
+        If something has gone wrong â€” a resolution you think is wrong, a bug, an order that behaved
+        unexpectedly â€” email us with the transaction hash and a description. Resolution complaints
         are published in the evidence log on the{" "}
-        <a href="/rules">rules page</a> if they arrive before the timelock expires.
+        <a href="/#resolves">rules page</a> if they arrive before the timelock expires.
       </p>
       <p>
         For privacy complaints you may also contact the Dutch supervisory authority, the{" "}
@@ -50,15 +50,15 @@ export default function OperatorPage() {
       <h2>Disclaimers</h2>
       <p>
         This is an unofficial fan project. It is not affiliated with, endorsed by, sponsored by or
-        connected to Gävle kommun, Visit Gävle, the Southern Merchants of Gävle, or Vasaskolan. No
-        official imagery, logos or photography are used. Any reference to &ldquo;Gävlebocken&rdquo;
+        connected to GÃ¤vle kommun, Visit GÃ¤vle, the Southern Merchants of GÃ¤vle, or Vasaskolan. No
+        official imagery, logos or photography are used. Any reference to &ldquo;GÃ¤vlebocken&rdquo;
         refers to the public artwork itself.
       </p>
 
       <h2>Source code</h2>
       <p>
         The smart contracts are intended to be published and verified on Basescan, with the address
-        listed on the <a href="/rules">rules page</a> so anyone can read them before depositing a
+        listed on the <a href="/#resolves">rules page</a> so anyone can read them before depositing a
         single USDC.
       </p>
     </LegalShell>

@@ -54,7 +54,8 @@ def main() -> int:
     s, b = req("POST", "/api/comments", {"body": "hello there"})
     check("anonymous post blocked", s == 401 and b.get("error") == "sign_in_required", s)
 
-    s, b = req("POST", "/api/auth/register", {"email": email, "password": "comment-test-pass-1"})
+    uname = "u" + secrets.token_hex(4)
+    s, b = req("POST", "/api/auth/register", {"username": uname, "email": email, "password": "comment-test-pass-1"})
     check("registered", s == 200, s)
 
     s, b = req("POST", "/api/comments", {"body": f"I think it burns before new year. {marker}"})

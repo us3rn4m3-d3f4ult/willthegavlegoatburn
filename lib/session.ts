@@ -2,7 +2,7 @@ import { hashToken, newToken, readToken } from "./auth";
 import { ensureSchema, getPool } from "./db";
 import { clientIp } from "./httpx";
 
-export type SessionUser = { id: string; email: string; createdAt: string };
+export type SessionUser = { id: string; email: string; username: string | null; createdAt: string };
 
 export async function createSession(userId: string, req: Request): Promise<string | null> {
   if (!(await ensureSchema())) return null;
@@ -33,7 +33,7 @@ export async function sessionUser(req: Request): Promise<SessionUser | null> {
 
   const tokenHash = hashToken(token);
   const { rows } = await pool.query(
-    `select u.id, u.email, u.created_at
+    `select u.id, u.email, u.username, u.created_at
        from sessions s
        join users u on u.id = s.user_id
       where s.token_hash = $1
@@ -51,6 +51,7 @@ export async function sessionUser(req: Request): Promise<SessionUser | null> {
   return {
     id: rows[0].id as string,
     email: rows[0].email as string,
+    username: (rows[0].username as string | null) ?? null,
     createdAt: (rows[0].created_at as Date).toISOString(),
   };
 }

@@ -57,13 +57,14 @@ def main() -> int:
     password = "correct-horse-battery"
     new_password = "another-long-password-42"
 
-    s, b = request("POST", "/api/auth/register", {"email": email, "password": password})
+    uname = "u" + secrets.token_hex(4)
+    s, b = request("POST", "/api/auth/register", {"username": uname, "email": email, "password": password})
     check("register", s == 200 and b.get("ok") is True, f"{s}")
 
     s, b = request("GET", "/api/auth/me")
     check("session works", s == 200 and b.get("user", {}).get("email") == email, f"{s}")
 
-    s, b = request("POST", "/api/auth/register", {"email": email, "password": password})
+    s, b = request("POST", "/api/auth/register", {"username": uname, "email": email, "password": password})
     check("duplicate rejected", s == 409 and b.get("error") == "email_taken", f"{s}")
 
     s, b = request("POST", "/api/auth/register", {"email": email, "password": "short"})

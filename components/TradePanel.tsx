@@ -6,11 +6,15 @@ import { fmtUsd } from "@/lib/format";
 
 const PRESETS = [10, 25, 50, 100];
 
+function priceOf(side: "yes" | "no", mid: number): number {
+  return side === "yes" ? Math.min(0.99, mid + 0.005) : Math.min(0.99, 1 - mid + 0.005);
+}
+
 export function TradePanel({ mid = MARKET.mid }: { mid?: number }) {
   const [side, setSide] = useState<"yes" | "no">("yes");
   const [amount, setAmount] = useState<string>("25");
 
-  const price = side === "yes" ? Math.min(0.99, mid + 0.005) : Math.min(0.99, 1 - mid + 0.005);
+  const price = priceOf(side, mid);
 
   const { shares, payout } = useMemo(() => {
     const a = Number(amount) || 0;
@@ -18,32 +22,53 @@ export function TradePanel({ mid = MARKET.mid }: { mid?: number }) {
     return { shares: s, payout: s };
   }, [amount, price]);
 
+  const yesPrice = priceOf("yes", mid);
+  const noPrice = priceOf("no", mid);
+
   return (
     <section className="rounded-card border border-line bg-surface p-4">
-      <div className="grid grid-cols-2 gap-2">
-        <button
-          type="button"
-          onClick={() => setSide("yes")}
-          aria-pressed={side === "yes"}
-          className={`h-10 rounded-btn text-[13px] font-semibold transition-colors ${
-            side === "yes"
-              ? "bg-yes text-black"
-              : "bg-surface2 text-muted hover:text-fg"
-          }`}
-        >
-          Buy Yes
-        </button>
-        <button
-          type="button"
-          onClick={() => setSide("no")}
-          aria-pressed={side === "no"}
-          className={`h-10 rounded-btn text-[13px] font-semibold transition-colors ${
-            side === "no" ? "bg-no text-black" : "bg-surface2 text-muted hover:text-fg"
-          }`}
-        >
-          Buy No
-        </button>
-      </div>
+      {/*
+        Radios, not buttons: the visible selection is driven by CSS
+        (peer-checked), so the toggle still works if JavaScript never runs.
+        The prices are printed on each option for the same reason.
+      */}
+      <fieldset>
+        <legend className="sr-only">Which side</legend>
+        <div className="grid grid-cols-2 gap-2">
+          <label className="cursor-pointer">
+            <input
+              type="radio"
+              name="side"
+              value="yes"
+              className="peer sr-only"
+              defaultChecked
+              onChange={() => setSide("yes")}
+            />
+            <span className="flex h-10 flex-col items-center justify-center rounded-btn bg-surface2 text-[12.5px] font-semibold text-muted transition-colors peer-checked:bg-yes peer-checked:text-black peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-yes/60">
+              <span>Buy Yes</span>
+              <span className="num text-[10.5px] font-medium opacity-80">
+                {(yesPrice * 100).toFixed(1)}c
+              </span>
+            </span>
+          </label>
+
+          <label className="cursor-pointer">
+            <input
+              type="radio"
+              name="side"
+              value="no"
+              className="peer sr-only"
+              onChange={() => setSide("no")}
+            />
+            <span className="flex h-10 flex-col items-center justify-center rounded-btn bg-surface2 text-[12.5px] font-semibold text-muted transition-colors peer-checked:bg-no peer-checked:text-black peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-no/60">
+              <span>Buy No</span>
+              <span className="num text-[10.5px] font-medium opacity-80">
+                {(noPrice * 100).toFixed(1)}c
+              </span>
+            </span>
+          </label>
+        </div>
+      </fieldset>
 
       <label htmlFor="amount" className="mt-4 block text-[11px] font-medium text-dim">
         Amount
@@ -66,7 +91,7 @@ export function TradePanel({ mid = MARKET.mid }: { mid?: number }) {
             key={p}
             type="button"
             onClick={() => setAmount(String(p))}
-            className="h-7 flex-1 rounded-[7px] border border-line bg-surface2 text-[11.5px] text-muted transition-colors hover:border-line2 hover:text-fg"
+            className="h-7 flex-1 rounded-[5px] border border-line bg-surface2 text-[11.5px] text-muted transition-colors hover:border-line2 hover:text-fg"
           >
             ${p}
           </button>
@@ -76,7 +101,7 @@ export function TradePanel({ mid = MARKET.mid }: { mid?: number }) {
       <dl className="mt-4 space-y-2 border-t border-line pt-4 text-[12.5px]">
         <div className="flex justify-between">
           <dt className="text-muted">Avg price</dt>
-          <dd className="num font-medium">{(price * 100).toFixed(1)}¢</dd>
+          <dd className="num font-medium">{(price * 100).toFixed(1)}c</dd>
         </div>
         <div className="flex justify-between">
           <dt className="text-muted">Shares</dt>
@@ -87,10 +112,6 @@ export function TradePanel({ mid = MARKET.mid }: { mid?: number }) {
           <dd className={`num font-semibold ${side === "yes" ? "text-yes" : "text-no"}`}>
             {fmtUsd(payout, 2)}
           </dd>
-        </div>
-        <div className="flex justify-between">
-          <dt className="text-muted">Max loss</dt>
-          <dd className="num font-medium">{fmtUsd(Number(amount) || 0, 2)}</dd>
         </div>
       </dl>
 

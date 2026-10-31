@@ -1,28 +1,30 @@
 # Resolution rules — implementation notes
 
-The **canonical, public version** of the rules lives at `/rules` in the app
-(`app/rules/page.tsx`). This file is the engineering record: how those rules map
-onto the contract, and what has to be frozen before deployment.
+The **public version** of the rules lives on the home page, in the
+"How this resolves" block (`app/page.tsx`, anchor `#resolves`). There is no
+separate rules page. This file is the engineering record: how those rules map onto
+the contract, and what has to be frozen before deployment.
 
 ---
 
 ## 1. The decision, in one line
 
-> **Yes** if the goat erected for Advent 2026 is set on fire and, as a result, must
-> be dismantled or rebuilt before its scheduled removal. **No** in every other case.
+> **Yes** if the goat burns. Any fire, any extent, deliberate or accidental.
+> **No** if nothing burns.
 
-The threshold is **structural removal**, not smoke. A singed leg is No.
+There is no requirement that the goat be destroyed or taken down, and no location
+clause: wherever the goat is standing, if it catches fire, that is Yes.
 
-## 2. Explicit No cases (these are the likely disputes)
+## 2. Explicit No cases
 
 | Case | Precedent | Result |
 |---|---|---|
-| Hit by a vehicle | 2021 | **No** |
-| Felled by a storm | 2025 (Storm Johannes, 27 Dec) | **No** |
+| Hit by a vehicle | 2021 | **No** — nothing burned |
+| Felled by a storm | 2025 (Storm Johannes, 27 Dec) | **No** — nothing burned |
 | Knocked over, cut, sprayed, stolen, eaten by birds | various | **No** |
-| Small fire, goat stays standing | — | **No** |
-| Burned *after* betting closes but before removal | — | **Yes** |
 | Goat never erected | — | **Void** |
+
+A single scorched leg is **Yes**. The threshold is fire, not damage.
 
 ## 3. Sources — fixed list, ≥2 of 3
 
