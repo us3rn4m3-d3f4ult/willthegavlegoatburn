@@ -638,6 +638,34 @@ export function TradePanel({
         </p>
       ) : null}
 
+      <details className="mt-3 rounded-[6px] border border-line bg-black px-3 py-2">
+        <summary className="flex cursor-pointer list-none items-center gap-2 text-[11px] text-muted [&::-webkit-details-marker]:hidden">
+          <span
+            aria-hidden="true"
+            className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-line2 text-[9px] font-semibold leading-none text-muted"
+          >
+            i
+          </span>
+          Which coin and network to use
+        </summary>
+        <div className="mt-2 space-y-1.5 text-[11px] leading-relaxed text-dim">
+          <p>
+            Only <span className="font-medium text-fg">USDC on Base</span> (chain id 8453,
+            contract <span className="num">0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913</span>)
+            works here.
+          </p>
+          <p>
+            USDC on Ethereum, Polygon, Arbitrum or anywhere else will not appear in your
+            balance, and nobody can recover it for you. Same for ETH or other tokens sent to
+            this contract.
+          </p>
+          <p>
+            Keep a little <span className="font-medium text-fg">ETH on Base</span> in the
+            wallet for gas. Transactions cost a fraction of a cent, but they are not free.
+          </p>
+        </div>
+      </details>
+
       {status || connectError ? (
         <p aria-live="polite" className="mt-2 text-center text-[11.5px] leading-relaxed text-muted">
           {status || connectError}

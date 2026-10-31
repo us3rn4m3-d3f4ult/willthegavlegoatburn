@@ -321,6 +321,10 @@ export function ConnectWallet() {
                 Only wallets installed in this browser appear here. Mobile wallets need
                 WalletConnect, which is not configured yet.
               </p>
+              <p className="mt-2 text-[11px] leading-relaxed text-dim">
+                To trade you need <span className="text-muted">USDC on Base</span>. USDC on
+                any other network will not show up.
+              </p>
 
               {connecting ? (
                 <p className="mt-2 text-[11px] leading-relaxed text-muted">
