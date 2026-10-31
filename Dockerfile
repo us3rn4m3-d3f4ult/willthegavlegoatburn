@@ -8,6 +8,18 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci --no-audit --no-fund || npm install --no-audit --no-fund
 COPY . .
+
+# NEXT_PUBLIC_* values are inlined by Next at build time, so they must be present
+# HERE, not just at runtime. Passed as build args from compose.
+ARG NEXT_PUBLIC_CHAIN_ID=
+ARG NEXT_PUBLIC_RPC_URL=
+ARG NEXT_PUBLIC_MARKET_ADDRESS=
+ARG NEXT_PUBLIC_USDC_ADDRESS=
+ENV NEXT_PUBLIC_CHAIN_ID=$NEXT_PUBLIC_CHAIN_ID \
+    NEXT_PUBLIC_RPC_URL=$NEXT_PUBLIC_RPC_URL \
+    NEXT_PUBLIC_MARKET_ADDRESS=$NEXT_PUBLIC_MARKET_ADDRESS \
+    NEXT_PUBLIC_USDC_ADDRESS=$NEXT_PUBLIC_USDC_ADDRESS
+
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 

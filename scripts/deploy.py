@@ -31,6 +31,19 @@ SKIP = {
 def make_tarball() -> None:
     if TARBALL.exists():
         TARBALL.unlink()
+
+    # Compose reads infra/.env for build-arg interpolation. NEXT_PUBLIC_* values are
+    # public by definition, so writing them into the tarball is safe.
+    local_env = ROOT / ".env.local"
+    if local_env.exists():
+        public = [
+            line
+            for line in local_env.read_text(encoding="utf-8").splitlines()
+            if line.startswith("NEXT_PUBLIC_")
+        ]
+        (ROOT / "infra" / ".env").write_text("\n".join(public) + "\n", encoding="utf-8", newline="\n")
+        print(f"build env: {len(public)} NEXT_PUBLIC_ values")
+
     with tarfile.open(TARBALL, "w:gz") as tar:
         for p in sorted(ROOT.rglob("*")):
             rel = p.relative_to(ROOT)

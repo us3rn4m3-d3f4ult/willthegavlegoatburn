@@ -5,6 +5,13 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
+      # Inlined into the client bundle at build time. Values come from infra/.env,
+      # which deploy.py writes from .env.local on every deploy.
+      args:
+        NEXT_PUBLIC_CHAIN_ID: ${NEXT_PUBLIC_CHAIN_ID:-}
+        NEXT_PUBLIC_RPC_URL: ${NEXT_PUBLIC_RPC_URL:-}
+        NEXT_PUBLIC_MARKET_ADDRESS: ${NEXT_PUBLIC_MARKET_ADDRESS:-}
+        NEXT_PUBLIC_USDC_ADDRESS: ${NEXT_PUBLIC_USDC_ADDRESS:-}
     container_name: gavle-web
     restart: unless-stopped
     env_file:
