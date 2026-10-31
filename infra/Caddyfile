@@ -21,7 +21,16 @@
 willthegavlegoatburn.com {
   encode zstd gzip
 
-  tls /certs/origin.pem /certs/origin.key
+  # Default: Caddy fetches its own Let's Encrypt cert. This works fine with
+  # Cloudflare proxying ON, and satisfies SSL mode "Full (strict)" because a
+  # publicly-trusted cert is presented at the origin.
+  #
+  # Optional upgrade — pin a Cloudflare Origin Certificate instead (15-year
+  # validity, no external issuance). Download it from
+  #   SSL/TLS → Origin Server → Create Certificate
+  # save as infra/certs/origin.pem + origin.key, then uncomment:
+  #
+  # tls /certs/origin.pem /certs/origin.key
 
   header {
     Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"

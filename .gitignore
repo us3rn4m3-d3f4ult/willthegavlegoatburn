@@ -39,3 +39,4 @@ Thumbs.db
 # misc
 coverage/
 sentry.*.config.ts.bak
+app.tar.gz

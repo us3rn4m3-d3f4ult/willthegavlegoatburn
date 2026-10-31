@@ -51,6 +51,10 @@ docker compose logs -f caddy
 
 ## 2. Cloudflare — the "cloudflare thing", step by step
 
+> **Status as of 30 Oct 2026:** the domain is already registered and already on
+> Cloudflare nameservers (`alexia.ns` / `logan.ns.cloudflare.com`). **Skip 2.1–2.4.**
+> Only the DNS records (2.5) and TLS mode (2.6) are outstanding.
+
 ### 2.1 If you have not bought the domain yet
 
 Cloudflare Dashboard → **Domain Registration → Register Domains** → search
@@ -91,23 +95,24 @@ save.
 
 ### 2.6 TLS — the part people get wrong
 
-Set **SSL/TLS → Overview → Full (strict)**. For that you need an Origin
-Certificate, because Caddy's config expects `/certs/origin.pem`:
+Set **SSL/TLS → Overview → Full (strict)**.
 
-1. **SSL/TLS → Origin Server → Create Certificate**
-2. Hostnames: `willthegavlegoatburn.com`, `*.willthegavlegoatburn.com`
-3. Validity: 15 years → Create
-4. Save the two blocks as `infra/certs/origin.pem` and `infra/certs/origin.key`
-   on the **server** (never in git — `.gitignore` covers `*.pem`/`*.key`)
-5. `docker compose restart caddy`
+Caddy now fetches its own Let's Encrypt certificate, which satisfies Full (strict)
+because a publicly-trusted cert is presented at the origin — **no Origin
+Certificate is required.** (The `tls /certs/origin.pem` line in `infra/Caddyfile`
+is commented out and is an optional upgrade: pinned 15-year cert, no external
+issuance. If you want it: SSL/TLS → Origin Server → Create Certificate, save as
+`infra/certs/origin.pem` + `origin.key` on the server, uncomment the line, restart
+Caddy.)
 
 Then **SSL/TLS → Edge Certificates**: Always Use HTTPS **on** · HSTS **on**
 (start at 6 months; raise to 1 year + preload once you're sure) · Minimum TLS
 **1.2** · TLS 1.3 **on**.
 
-> Don't want Cloudflare proxying? Set the A record to **DNS only** (grey) and
-> delete the `tls` line from `infra/Caddyfile` — Caddy will fetch its own Let's
-> Encrypt cert. Your origin IP becomes public, which is why proxying is better.
+> Don't want Cloudflare proxying? Set the A record to **DNS only** (grey). Caddy
+> still gets its cert over HTTP-01. Your origin IP becomes public, which is why
+> proxying is better.
+
 
 ### 2.7 Edge protection
 
