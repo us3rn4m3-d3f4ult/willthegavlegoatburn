@@ -41,9 +41,15 @@ function FillBar({ value, label }: { value: number; label: string }) {
   );
 }
 
-export function TradePanel({ mid: fallbackMid = 0.5 }: { mid?: number }) {
+export function TradePanel({
+  mid: fallbackMid = 0.5,
+  anchor = true,
+}: {
+  mid?: number;
+  anchor?: boolean;
+}) {
   const { account, connect, ensureChain, walletClient } = useWallet();
-  const { pick, bump, version } = useTradeState();
+  const { pick, bump, version, sideRequest } = useTradeState();
 
   const [isYes, setIsYes] = useState(true);
   const [action, setAction] = useState<Action>("buy");
@@ -79,6 +85,15 @@ export function TradePanel({ mid: fallbackMid = 0.5 }: { mid?: number }) {
     setPriceCents((pick.price * 100).toFixed(1));
     setStatus("");
   }, [pick]);
+
+  // Tapping Buy Yes / Buy No in the mobile bar.
+  useEffect(() => {
+    if (!sideRequest) return;
+    setIsYes(sideRequest.isYes);
+    setMode("market");
+    setAction("buy");
+    setStatus("");
+  }, [sideRequest]);
 
   const loadBook = useCallback(() => {
     const q = account ? `?maker=${account.toLowerCase()}` : "";
@@ -402,7 +417,7 @@ export function TradePanel({ mid: fallbackMid = 0.5 }: { mid?: number }) {
 
   return (
     <section
-      id="trade-panel"
+      id={anchor ? "trade-panel" : undefined}
       className="scroll-mt-24 rounded-card border border-line bg-surface p-4"
     >
       <div className="flex items-baseline justify-between">

@@ -9,6 +9,7 @@ import { LiveMarket } from "@/components/LiveMarket";
 import { OrderBookLive } from "@/components/OrderBookLive";
 import { TradeProvider } from "@/components/TradeProvider";
 import { HowTradingWorks } from "@/components/HowTradingWorks";
+import { MobileTradeBar } from "@/components/MobileTradeBar";
 import { fmtCompact, fmtUsd } from "@/lib/format";
 import { FAQ, SITE, faqJsonLd } from "@/lib/seo";
 import type { Metadata } from "next";
@@ -55,7 +56,7 @@ function RecentTrades() {
 export default function HomePage() {
   return (
     <TradeProvider>
-      <div className="grid gap-6 py-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8">
+      <div className="grid gap-6 pt-6 pb-28 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8 lg:py-8">
       <div className="min-w-0 space-y-6">
         <section className="rounded-card border border-line bg-surface p-6">
           <div className="flex flex-wrap items-center gap-2">
@@ -75,30 +76,6 @@ export default function HomePage() {
           </h1>
 
           <LiveMarket />
-        </section>
-
-        <section className="rounded-card border border-line bg-surface p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-[13px] font-semibold tracking-tight">The goat has a history</h2>
-            <Link
-              href="/goat-history"
-              className="text-[12px] text-muted underline decoration-line2 underline-offset-2 hover:text-fg"
-            >
-              All 60 years
-            </Link>
-          </div>
-          <ul className="mt-3 grid gap-1.5 text-[12.5px] sm:grid-cols-3">
-            {GOAT_HISTORY.filter((g) => [1966, 2021, 2025].includes(g.year)).map((g) => (
-              <li key={g.year} className="text-muted">
-                <span className="num font-medium text-fg">{g.year}</span>{" "}
-                {g.burned ? (
-                  <span className="text-yes">- burned</span>
-                ) : (
-                  <span className="text-no">- not fire</span>
-                )}
-              </li>
-            ))}
-          </ul>
         </section>
 
         <section
@@ -126,6 +103,30 @@ export default function HomePage() {
 
         <OrderBookLive />
 
+        <section className="rounded-card border border-line bg-surface p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-[13px] font-semibold tracking-tight">The goat has a history</h2>
+            <Link
+              href="/goat-history"
+              className="text-[12px] text-muted underline decoration-line2 underline-offset-2 hover:text-fg"
+            >
+              All 60 years
+            </Link>
+          </div>
+          <ul className="mt-3 grid gap-1.5 text-[12.5px] sm:grid-cols-3">
+            {GOAT_HISTORY.filter((g) => [1966, 2021, 2025].includes(g.year)).map((g) => (
+              <li key={g.year} className="text-muted">
+                <span className="num font-medium text-fg">{g.year}</span>{" "}
+                {g.burned ? (
+                  <span className="text-yes">- burned</span>
+                ) : (
+                  <span className="text-no">- not fire</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+
         <Comments />
 
         <section className="rounded-card border border-line bg-surface p-5">
@@ -146,11 +147,12 @@ export default function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd()) }}
       />
 
-      <aside className="h-fit space-y-4 lg:sticky lg:top-24">
+      <aside className="hidden h-fit space-y-4 lg:sticky lg:top-24 lg:block">
         <TradePanel mid={MARKET.mid} />
         <HowTradingWorks />
       </aside>
       </div>
+      <MobileTradeBar />
     </TradeProvider>
   );
 }

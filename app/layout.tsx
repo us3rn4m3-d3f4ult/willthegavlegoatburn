@@ -75,7 +75,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </a>
         <WalletProvider>
           <Header />
-          <main id="main" className="mx-auto max-w-[1120px] px-6">
+          <main id="main" className="mx-auto max-w-[1120px] px-3 sm:px-6">
             {children}
           </main>
           <Footer />

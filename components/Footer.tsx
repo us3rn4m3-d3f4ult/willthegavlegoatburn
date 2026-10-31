@@ -31,8 +31,8 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
 
 export function Footer() {
   return (
-    <footer className="mt-24 border-t border-line">
-      <div className="mx-auto max-w-[1120px] px-6 py-14">
+    <footer className="mt-24 border-t border-line pb-24 lg:pb-0">
+      <div className="mx-auto max-w-[1120px] px-3 py-14 sm:px-6">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <p className="text-[15px] font-semibold tracking-tight">willthegavlegoatburn</p>
