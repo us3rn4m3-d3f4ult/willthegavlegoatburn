@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { createWalletClient, custom, type Address, type WalletClient } from "viem";
+import { createPortal } from "react-dom";
 import { CHAIN_ID_PUBLIC, chain } from "@/lib/web3";
 
 type Eip1193 = {
@@ -190,6 +191,11 @@ export function ConnectWallet() {
     useWallet();
   const [copied, setCopied] = useState(false);
   const [open, setOpen] = useState(false);
+  // The header has backdrop-blur, which makes position:fixed children position
+  // against the header instead of the viewport. Portal the dialog to <body> so it
+  // truly centres and the dimmer covers the whole screen.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const anyProvider = hasProvider || wallets.length > 0;
 
   if (!anyProvider) {
@@ -207,12 +213,13 @@ export function ConnectWallet() {
           {connecting ? "Connecting…" : "Connect wallet"}
         </button>
 
-        {open ? (
+        {open && mounted
+          ? createPortal(
           <div
             role="dialog"
             aria-modal="true"
             aria-label="Choose a wallet"
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4"
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
             onClick={() => setOpen(false)}
           >
             <div
@@ -259,8 +266,10 @@ export function ConnectWallet() {
                 WalletConnect, which is not configured yet.
               </p>
             </div>
-          </div>
-        ) : null}
+          </div>,
+            document.body,
+          )
+          : null}
       </>
     );
   }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AccountView } from "@/components/AccountView";
+import { Portfolio } from "@/components/Portfolio";
 
 export const metadata: Metadata = {
   title: "Your account",
@@ -15,7 +16,8 @@ export default function AccountPage() {
         Positions live on-chain and are read from your wallet, not from this account.
       </p>
 
-      <div className="mt-6">
+      <div className="mt-6 space-y-4">
+        <Portfolio />
         <AccountView />
       </div>
     </div>
