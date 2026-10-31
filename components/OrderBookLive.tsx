@@ -85,7 +85,9 @@ export function OrderBookLive() {
 
   const asks = (book?.asks ?? []).filter((l) => l.isYes === outcome);
   const bids = (book?.bids ?? []).filter((l) => l.isYes === outcome);
-  const mine = (book?.mine ?? []).filter((l) => l.isYes === outcome);
+  // Show every order the wallet has, not just the outcome currently on screen —
+  // otherwise your No orders vanish when you are looking at Yes.
+  const mine = book?.mine ?? [];
 
   const bestAsk = asks[0]?.price;
   const bestBid = bids[0]?.price;
@@ -207,13 +209,17 @@ export function OrderBookLive() {
       {mine.length > 0 ? (
         <div className="border-t border-line">
           <header className="px-4 py-2 text-[10px] font-medium uppercase tracking-[0.1em] text-dim">
-            Your open orders · {outcome ? "Yes" : "No"}
+            Your open orders
           </header>
           <ul className="divide-y divide-line/50">
             {mine.map((o) => (
               <li key={o.id} className="flex items-center justify-between px-4 py-2 text-[12px]">
                 <span className="text-muted">
-                  #{o.id} · <span className="num">{(o.price * 100).toFixed(1)}¢</span> ·{" "}
+                  #{o.id} ·{" "}
+                  <span className={o.isYes ? "text-yes" : "text-no"}>
+                    {o.isYes ? "Yes" : "No"}
+                  </span>{" "}
+                  · <span className="num">{(o.price * 100).toFixed(1)}¢</span> ·{" "}
                   <span className="num">{o.shares.toFixed(2)}</span> sh
                 </span>
                 <button
