@@ -28,7 +28,11 @@ export const FAQ: FaqItem[] = [
   },
   {
     q: "What counts as the goat burning?",
-    a: "Only fire that forces the structure to be dismantled or rebuilt before its scheduled removal. Damage by a car (2021) or a storm (2025) does not count. The full rules and source list are published before trading opens.",
+    a: "Any fire at all. A scorched leg is enough — the goat does not have to be dismantled, destroyed or rebuilt, and the fire does not have to win. Damage without fire, such as the 2021 car or the 2025 storm, does not count. If no goat is erected at all, nothing burned, so it settles No.",
+  },
+  {
+    q: "Who is behind this?",
+    a: "An open-source community project, not a company. The market is a smart contract on Base, so the rules are fixed in code instead of being decided by an operator. It is not affiliated with Polymarket or any exchange — Polymarket does not currently list a Gävle goat market, which is why a group of people who follow the goat built one themselves.",
   },
   {
     q: "Is this custodial? Does it hold my funds?",

@@ -87,12 +87,13 @@ export default function HomePage() {
             <p>
               <span className="font-medium text-fg">Yes</span> if the goat catches fire at any
               point - a scorched leg or the whole thing to the ground, deliberate or accidental.
-              It does not have to be destroyed.
+              <span className="font-medium text-fg"> Any fire counts.</span> It does not need to
+              be dismantled, destroyed or rebuilt, and the fire does not have to win.
             </p>
             <p>
-              <span className="font-medium text-fg">No</span> if it never burns. Destroyed some
-              other way - hit by a car in 2021, blown over by a storm in 2025 - is{" "}
-              <span className="font-medium text-fg">No</span>, because nothing burned.
+              <span className="font-medium text-fg">No</span> if it never burns. Damaged or
+              destroyed some other way - hit by a car in 2021, brought down by a storm in 2025 -
+              is <span className="font-medium text-fg">No</span>, because nothing burned.
             </p>
             <p>
               If no goat goes up at all, nothing burned, so it settles{" "}
