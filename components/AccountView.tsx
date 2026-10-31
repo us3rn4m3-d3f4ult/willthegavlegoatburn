@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AbstractAvatar } from "@/components/AbstractAvatar";
 import { RecoveryCodes } from "@/components/RecoveryCodes";
+import { Withdraw } from "@/components/Withdraw";
 
 type Me = {
   user: { id: string; email: string; createdAt: string } | null;
@@ -202,6 +203,8 @@ export function AccountView() {
           Sign out
         </button>
       </div>
+
+      <Withdraw />
 
       <section className="panel p-5">
         <h2 className="text-[13px] font-semibold text-fg">Change password</h2>

@@ -490,31 +490,6 @@ export function TradePanel({
   }
 
   // Fill bar for resting orders: compare what is still in the book to what was placed.
-  async function withdrawAll() {
-    const w = walletClient();
-    if (!w || !account || bal.usdc <= 0 || !(await ensureChain())) return;
-    setBusy(true);
-    setStatus("Withdrawing USDC to your wallet…");
-    try {
-      const h = await w.writeContract({
-        address: BOOK_ADDRESS,
-        abi: BOOK_ABI,
-        functionName: "withdraw",
-        args: [units(bal.usdc)],
-        chain,
-        account,
-      });
-      await publicClient.waitForTransactionReceipt({ hash: h });
-      setStatus("Withdrawn.");
-      void loadBalances();
-    } catch {
-      setStatus("Withdraw rejected.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  // Fill bar for resting orders: compare what is still in the book to what was placed.
   const restingFills = tracked
     .filter((t) => t.isYes === isYes)
     .map((t) => {
@@ -777,17 +752,6 @@ export function TradePanel({
         >
           {ok ?? status ?? connectError}
         </p>
-      ) : null}
-
-      {account && bal.usdc > 0 ? (
-        <button
-          type="button"
-          onClick={withdrawAll}
-          disabled={busy}
-          className="mt-3 w-full text-center text-[11.5px] text-dim transition-colors hover:text-fg disabled:opacity-40"
-        >
-          Withdraw {bal.usdc.toFixed(2)} USDC
-        </button>
       ) : null}
       </div>
     </section>
