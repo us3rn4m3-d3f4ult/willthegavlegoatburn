@@ -85,41 +85,49 @@ export function LiveMarket() {
         </div>
       </div>
 
-      {/* Chart: no card, just the line. 50% sits exactly in the middle. */}
-      <div className="mt-6">
-        <svg
-          viewBox={`0 0 ${W} ${H}`}
-          className="h-[150px] w-full"
-          role="img"
-          aria-label="Implied probability over time, centred on 50 percent"
-        >
-          <line
-            x1={PAD}
-            x2={W - PAD}
-            y1={yOf(0.5)}
-            y2={yOf(0.5)}
-            stroke="#26262d"
-            strokeWidth="1"
-            strokeDasharray="3 4"
-          />
-          <text x={PAD} y={yOf(0.5) - 4} fill="#5a5a62" fontSize="9">
-            50%
-          </text>
-          <polyline
-            points={coords.join(" ")}
-            fill="none"
-            stroke="#ff5c2b"
-            strokeWidth="1.5"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-          />
-        </svg>
-        <div className="flex justify-between px-1 text-[10px] text-dim">
+      {/* Chart in a card. 50% sits exactly in the middle. */}
+      <section className="mt-6 overflow-hidden rounded-card border border-line bg-surface">
+        <header className="flex items-center justify-between border-b border-line px-4 py-3">
+          <h2 className="text-[13px] font-semibold tracking-tight">Odds history</h2>
+          <span className="text-[11px] text-dim">
+            {pts.length > 1 ? `${pts.length} pts, 1/min` : "collecting — one point per minute"}
+          </span>
+        </header>
+        <div className="px-2 pt-3 pb-1">
+          <svg
+            viewBox={`0 0 ${W} ${H}`}
+            className="h-[150px] w-full"
+            role="img"
+            aria-label="Implied probability over time, centred on 50 percent"
+          >
+            <line
+              x1={PAD}
+              x2={W - PAD}
+              y1={yOf(0.5)}
+              y2={yOf(0.5)}
+              stroke="#26262d"
+              strokeWidth="1"
+              strokeDasharray="3 4"
+            />
+            <text x={PAD} y={yOf(0.5) - 4} fill="#5a5a62" fontSize="9">
+              50%
+            </text>
+            <polyline
+              points={coords.join(" ")}
+              fill="none"
+              stroke="#ff5c2b"
+              strokeWidth="1.5"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+          </svg>
+        </div>
+        <div className="flex justify-between border-t border-line px-4 py-1.5 text-[10px] text-dim">
           <span>{pts.length > 1 ? label(pts[0].t) : ""}</span>
-          <span>{pts.length > 1 ? `${pts.length} pts, 1/min` : "collecting — one point per minute"}</span>
+          <span>{pct ? `${(pct * 100).toFixed(1)}% now` : ""}</span>
           <span>{pts.length > 1 ? label(pts[pts.length - 1].t) : ""}</span>
         </div>
-      </div>
+      </section>
 
       <dl className="mt-6 grid grid-cols-2 gap-5 border-t border-line pt-5 sm:grid-cols-4">
         {[
