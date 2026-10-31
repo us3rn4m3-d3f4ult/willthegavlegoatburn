@@ -5,7 +5,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Goat history",
   description:
-    "Sixty years of the GÃ¤vle goat: which years it burned, which years it survived, and the years it was destroyed by something other than fire.",
+    "Sixty years of the Gävle goat: which years it burned, which years it survived, and the years it was destroyed by something other than fire.",
   alternates: { canonical: "/goat-history" },
 };
 

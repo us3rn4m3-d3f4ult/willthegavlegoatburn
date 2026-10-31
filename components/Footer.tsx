@@ -21,11 +21,10 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
     ],
   },
   {
-    title: "About",
+    title: "Contact",
     links: [
-      { href: "/legal", label: "Operator & contact" },
-      { href: "/legal#complaints", label: "Complaints" },
-      { href: "/status", label: "Status" },
+      { href: "mailto:contact@willthegavlegoatburn.com", label: "contact@willthegavlegoatburn.com" },
+      { href: "/how-it-works", label: "How it works" },
     ],
   },
 ];

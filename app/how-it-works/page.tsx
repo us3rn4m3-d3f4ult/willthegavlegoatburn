@@ -21,7 +21,7 @@ const STEPS = [
   {
     n: "03",
     title: "Anyone can earn the spread",
-    body: "Split 1 USDC into a Yes + No pair and list both sides above 1.00 combined. If both fill, you keep the difference with no directional risk. That is the only market-making revenue here â€” we take nothing.",
+    body: "Split 1 USDC into a Yes + No pair and list both sides above 1.00 combined. If both fill, you keep the difference with no directional risk. That is the only market-making revenue here — we take nothing.",
   },
   {
     n: "04",
