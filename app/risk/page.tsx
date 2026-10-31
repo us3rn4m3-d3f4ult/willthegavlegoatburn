@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 import { LegalShell } from "@/components/LegalShell";
 
-export const metadata: Metadata = { title: "Risk disclosure" };
+export const metadata: Metadata = {
+  title: "Risk disclosure",
+  description:
+    "You can lose your entire stake. Resolution, contract, liquidity, wallet and tax risks explained before you trade.",
+  alternates: { canonical: "/risk" },
+};
+
 
 export default function RiskPage() {
   return (
@@ -56,6 +62,13 @@ export default function RiskPage() {
         rate in force (37.8% in 2026). Because no operator withholds this for you, you may have to
         declare winnings yourself. This is general information, not tax advice — check with a
         professional.
+      </p>
+
+      <h2>Network fees</h2>
+      <p>
+        We charge nothing — no protocol fee, no rake, no cut of any payout. But every transaction you
+        sign costs a small network fee on Base, paid by you directly to the blockchain. Network fees
+        are never refunded, including for transactions that revert or positions that lose.
       </p>
 
       <h2>Not investment advice</h2>

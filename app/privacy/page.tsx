@@ -4,6 +4,7 @@ import { LegalShell } from "@/components/LegalShell";
 export const metadata: Metadata = {
   title: "Privacy statement",
   description: "What we store, why, for how long, and how to exercise your rights.",
+  alternates: { canonical: "/privacy" },
 };
 
 export default function PrivacyPage() {
@@ -11,7 +12,7 @@ export default function PrivacyPage() {
     <LegalShell
       title="Privacy statement"
       updated="30 October 2026"
-      intro="DRAFT — this text must be reviewed by Dutch counsel before launch. It describes the design we are building, and every claim in it has to stay true in the code."
+      intro="What we store, why we store it, how long we keep it, and how to get it deleted. Short version: an email address and a password hash, nothing else — your positions live on the blockchain, not in our database."
     >
       <h2>Who is responsible</h2>
       <p>

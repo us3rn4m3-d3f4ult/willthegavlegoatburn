@@ -6,6 +6,14 @@ import { OrderBook } from "@/components/OrderBook";
 import { PriceChart } from "@/components/PriceChart";
 import { TradePanel } from "@/components/TradePanel";
 import { fmtCompact, fmtUsd } from "@/lib/format";
+import { FAQ, SITE, faqJsonLd } from "@/lib/seo";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Will the Gävle goat burn in 2026?",
+  description: SITE.description,
+  alternates: { canonical: "/" },
+};
 
 function Stat({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -80,7 +88,69 @@ export default function HomePage() {
           <OrderBook mid={MARKET.mid} />
           <RecentTrades />
         </div>
+
+        {/* ── rules strip ─────────────────────────────────── */}
+        <section className="rounded-card border border-line bg-surface p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-[13px] font-semibold tracking-tight">How this resolves</h2>
+            <Link
+              href="/rules"
+              className="text-[12px] text-muted underline decoration-line2 underline-offset-2 hover:text-fg"
+            >
+              Full rules
+            </Link>
+          </div>
+          <p className="mt-2.5 max-w-[70ch] text-[12.5px] leading-relaxed text-muted">
+            <span className="font-medium text-fg">Yes</span> if the goat is set on fire and has to
+            come down before its scheduled removal. <span className="font-medium text-fg">No</span>{" "}
+            if it survives — or is destroyed any other way. A car (2021) or a storm (2025) is not a
+            fire. Confirmed by two of three published sources.
+          </p>
+        </section>
+
+        {/* ── history teaser ──────────────────────────────── */}
+        <section className="rounded-card border border-line bg-surface p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-[13px] font-semibold tracking-tight">The goat has a history</h2>
+            <Link
+              href="/goat-history"
+              className="text-[12px] text-muted underline decoration-line2 underline-offset-2 hover:text-fg"
+            >
+              All 60 years
+            </Link>
+          </div>
+          <ul className="mt-3 grid gap-1.5 text-[12.5px] sm:grid-cols-3">
+            {GOAT_HISTORY.filter((g) => [1966, 2021, 2025].includes(g.year)).map((g) => (
+              <li key={g.year} className="text-muted">
+                <span className="num font-medium text-fg">{g.year}</span>{" "}
+                {g.burned ? (
+                  <span className="text-yes">· burned</span>
+                ) : (
+                  <span className="text-no">· not fire</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        {/* ── FAQ (also emitted as FAQPage structured data) ── */}
+        <section className="rounded-card border border-line bg-surface p-5">
+          <h2 className="text-[13px] font-semibold tracking-tight">Questions people ask</h2>
+          <dl className="mt-3 divide-y divide-line">
+            {FAQ.map((item) => (
+              <div key={item.q} className="py-3 first:pt-0 last:pb-0">
+                <dt className="text-[12.5px] font-medium text-fg">{item.q}</dt>
+                <dd className="mt-1.5 text-[12.5px] leading-relaxed text-muted">{item.a}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
       </div>
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd()) }}
+      />
 
       {/* ── sticky trade column ───────────────────────────── */}
       <aside className="h-fit space-y-4 lg:sticky lg:top-24">

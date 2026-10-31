@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import { LegalShell } from "@/components/LegalShell";
 
-export const metadata: Metadata = { title: "Cookie statement" };
+export const metadata: Metadata = {
+  title: "Cookie statement",
+  alternates: { canonical: "/cookies" },
+};
+
 
 const ROWS = [
   {

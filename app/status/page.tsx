@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Status" };
+export const metadata: Metadata = {
+  title: "Status",
+  alternates: { canonical: "/status" },
+};
+
 
 const SERVICES = [
   { name: "Website", state: "Operational" },

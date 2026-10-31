@@ -1,14 +1,17 @@
 import type { Metadata } from "next";
 import { LegalShell } from "@/components/LegalShell";
 
-export const metadata: Metadata = { title: "Terms of use" };
+export const metadata: Metadata = {
+  title: "Terms of use",
+  alternates: { canonical: "/terms" },
+};
 
 export default function TermsPage() {
   return (
     <LegalShell
       title="Terms of use"
       updated="30 October 2026"
-      intro="DRAFT — to be reviewed by Dutch counsel before launch. These terms describe a non-custodial product: we never hold your funds, and we cannot reverse a transaction."
+      intro="These terms cover a non-custodial product: we never hold your funds, we charge no fee, and no transaction can be reversed — by us or by anyone else."
     >
       <h2>1. Eligibility</h2>
       <p>

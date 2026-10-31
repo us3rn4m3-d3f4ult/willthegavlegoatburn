@@ -40,7 +40,12 @@ export function Footer() {
             <p className="mt-3 max-w-[26ch] text-[13px] leading-relaxed text-muted">
               A non-custodial prediction market on whether the Gävle goat survives 2026.
             </p>
-            <p className="mt-4 text-[12px] text-dim">Built on Base · Settled in USDC</p>
+            <p className="mt-4 text-[12px] text-dim">
+              Built on Base · Settled in USDC · No protocol fees
+            </p>
+            <p className="mt-1 text-[12px] text-dim">
+              You pay only your own network fee
+            </p>
           </div>
 
           {COLUMNS.map((col) => (

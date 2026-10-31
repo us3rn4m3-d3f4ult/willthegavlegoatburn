@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Goat history",
   description:
     "Sixty years of the Gävle goat: which years it burned, which years it survived, and the years it was destroyed by something other than fire.",
+  alternates: { canonical: "/goat-history" },
 };
 
 export default function GoatHistoryPage() {

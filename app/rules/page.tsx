@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Resolution rules",
   description:
     "Exactly how the 2026 Gävle goat market resolves: sources, definitions, edge cases and the refund path.",
+  alternates: { canonical: "/rules" },
 };
 
 export default function RulesPage() {

@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import { TRADES } from "@/lib/market";
 import { fmtCompact } from "@/lib/format";
 
-export const metadata: Metadata = { title: "Activity" };
+export const metadata: Metadata = {
+  title: "Activity",
+  alternates: { canonical: "/activity" },
+};
+
 
 export default function ActivityPage() {
   return (

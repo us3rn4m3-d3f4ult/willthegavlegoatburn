@@ -102,7 +102,7 @@ export function TradePanel({ mid = MARKET.mid }: { mid?: number }) {
         Connect wallet to trade
       </button>
       <p className="mt-2.5 text-center text-[11px] leading-relaxed text-dim">
-        Non-custodial. Funds never touch this website. 1 Yes + 1 No = 1 USDC, always.
+        No protocol fee. You pay only the network fee for your own transaction.
       </p>
     </section>
   );

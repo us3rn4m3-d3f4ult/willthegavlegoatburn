@@ -4,6 +4,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "How it works",
   description: "Outcome shares, the order book, and why we never hold your funds.",
+  alternates: { canonical: "/how-it-works" },
 };
 
 const STEPS = [

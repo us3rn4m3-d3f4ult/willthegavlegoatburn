@@ -1,14 +1,17 @@
 import type { Metadata } from "next";
 import { LegalShell } from "@/components/LegalShell";
 
-export const metadata: Metadata = { title: "Operator & contact" };
+export const metadata: Metadata = {
+  title: "Operator & contact",
+  alternates: { canonical: "/legal" },
+};
 
 export default function OperatorPage() {
   return (
     <LegalShell
       title="Operator & contact"
       updated="30 October 2026"
-      intro="Who runs this, how to reach them, and how to complain. DRAFT — entity details are placeholders until incorporation."
+      intro="Who runs this, how to reach them, and how to complain."
     >
       <h2>Operator</h2>
       <p>
