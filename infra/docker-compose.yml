@@ -15,6 +15,9 @@ services:
       - HOSTNAME=0.0.0.0
     expose:
       - "3000"
+    # Persist notify signups across restarts and image rebuilds.
+    volumes:
+      - notify_data:/app/data
     # No ports published: only Caddy can reach the app container.
     security_opt:
       - no-new-privileges:true
@@ -57,4 +60,5 @@ services:
 volumes:
   caddy_data:
   caddy_config:
+  notify_data:
   # pgdata:

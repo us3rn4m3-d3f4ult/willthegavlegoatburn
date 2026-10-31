@@ -187,3 +187,46 @@ Value: v=DMARC1; p=quarantine; rua=mailto:contact@willthegavlegoatburn.com; pct=
 
 Without this, password-reset mail lands in spam — and reset mail in spam means
 people think your site is broken.
+
+---
+
+## 4. Maintenance mode and the email list
+
+`SITE_MODE=maintenance` in `.env.local` gates the whole site behind
+`/maintenance`: an "opens 1 November" page with an email capture form. Everything
+except the legal pages, `/rules`, `/goat-history`, `/sitemap.xml`, `/robots.txt`
+and `/api/*` is rewritten to it by `middleware.ts`.
+
+**To open the site on 1 November:**
+
+```bash
+ssh deploy@148.135.185.56
+cd ~/gavle
+sed -i 's/^SITE_MODE=maintenance$/SITE_MODE=live/' .env.local
+cd infra && docker compose up -d --force-recreate web
+```
+
+No rebuild, no deploy, no code change — but the container **must** be recreated,
+because `env_file` is read when the container is created, not per request.
+
+**Signups** land in a Docker volume as append-only JSONL:
+
+```bash
+# read the list
+ssh deploy@148.135.185.56 "docker exec gavle-web cat /app/data/notify.jsonl"
+
+# export it
+ssh deploy@148.135.185.56 "docker exec gavle-web cat /app/data/notify.jsonl" > signups.jsonl
+```
+
+The volume is `gavle_notify_data` and survives image rebuilds. It is **not** in the
+nightly backup yet — if the list matters before launch, add it to `backup.sh` or
+export it weekly.
+
+**Protections in place:** per-IP rate limit (5/min per instance), a honeypot field
+that silently accepts and discards bot submissions, server-side email validation,
+and Cloudflare's edge rate limits. No CAPTCHA, no third-party script, no tracking.
+
+When the Postgres service is added, replace the body of `lib/notify.ts` — the route
+handler and the form do not need to change.
+
