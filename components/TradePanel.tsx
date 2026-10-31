@@ -347,16 +347,13 @@ export function TradePanel({
     }
     if (!w || !account) return;
 
-    // Re-read balances instead of trusting the 20-second-old poll: a stale reading
-    // makes the panel skip the deposit, and the contract then rejects the order.
+    // Funding happens in its own step now, so just verify it before placing.
     const fresh = await loadBalances();
-    if (action === "buy") {
-      const short = Math.max(0, usdcNeeded - (fresh?.usdc ?? 0));
-      if (short > 0) {
-        setFill({ value: 0, label: "funding" });
-        if (!(await fundUsdc(short))) return;
-      }
-    } else {
+    if (action === "buy" && (fresh?.usdc ?? 0) + 1e-9 < usdcNeeded) {
+      setStatus("Deposit the USDC first, then place the order.");
+      return;
+    }
+    if (action === "sell") {
       const held = isYes ? (fresh?.freeYes ?? 0) : (fresh?.freeNo ?? 0);
       const short = Math.max(0, value - held);
       if (short > 0) {
@@ -454,14 +451,33 @@ export function TradePanel({
       setStatus("That size is under 1 share — raise the amount.");
       return;
     }
-    // Never start something the wallet cannot pay for. Before this check the panel
-    // would ask to deposit money that wasn't there and the deposit reverted.
-    const spendable = bal.usdc + bal.wallet;
-    if (usdcNeeded - spendable > 1e-9) {
-      setStatus(
-        `That needs $${usdcNeeded.toFixed(2)}. You have $${spendable.toFixed(2)} USDC (${bal.wallet.toFixed(2)} in the wallet, ${bal.usdc.toFixed(2)} in the market). Lower the size or add USDC.`,
-      );
-      return;
+    // Two explicit steps: fund the market, then place. Doing both in one click is
+    // what kept failing — the order was simulated before the node serving the
+    // simulation had seen the deposit.
+    if (mode === "limit" && action === "buy") {
+      const fresh = await loadBalances();
+      const short = usdcNeeded - (fresh?.usdc ?? 0);
+      if (short > 1e-9) {
+        if (fresh && fresh.wallet + 1e-9 < short) {
+          setStatus(
+            `That order needs $${usdcNeeded.toFixed(2)}. Your wallet holds $${fresh.wallet.toFixed(2)} USDC.`,
+          );
+          return;
+        }
+        setBusy(true);
+        try {
+          await fundUsdc(short);
+          setStatus(
+            `Deposited $${short.toFixed(2)} into the market. Press the button again to place the order.`,
+          );
+        } catch (err) {
+          setStatus(explain(err));
+        } finally {
+          setBusy(false);
+          void loadBalances();
+        }
+        return;
+      }
     }
 
     setBusy(true);
@@ -517,6 +533,9 @@ export function TradePanel({
   const noLiquidity = mode === "market" && (plan?.steps.length ?? 0) === 0;
 
   const unitLabel = mode === "market" && action === "buy" ? "USDC" : "shares";
+  const needsDeposit =
+    mode === "limit" && action === "buy" && usdcNeeded > bal.usdc + 1e-9 && usdcNeeded > 0;
+
   const label = !BOOK_CONFIGURED
     ? "Market not deployed"
     : signedIn !== true
@@ -525,9 +544,11 @@ export function TradePanel({
         ? "Connect wallet to trade"
         : busy
           ? "Working…"
-          : mode === "market"
-            ? `${action === "buy" ? "Buy" : "Sell"} ${isYes ? "Yes" : "No"} at market`
-            : `${action === "buy" ? "Place bid" : "Place ask"} · ${Number(priceCents).toFixed(1)}¢`;
+          : needsDeposit
+            ? `Deposit $${usdcNeeded.toFixed(2)} USDC`
+            : mode === "market"
+              ? `${action === "buy" ? "Buy" : "Sell"} ${isYes ? "Yes" : "No"} at market`
+              : `${action === "buy" ? "Place bid" : "Place ask"} · ${Number(priceCents).toFixed(1)}¢`;
 
   return (
     <section
