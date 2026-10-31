@@ -203,14 +203,19 @@ export function ConnectWallet() {
 
   // Account comes first: a wallet is useless here until there is a user behind it.
   if (signedIn === null) {
-    return <span className="h-8 w-[92px] animate-pulse rounded-btn bg-surface2" aria-hidden />;
+    return (
+      <span
+        className="hidden h-8 w-[92px] animate-pulse rounded-btn bg-surface2 lg:block"
+        aria-hidden
+      />
+    );
   }
 
   if (signedIn === false) {
     return (
       <Link
         href="/register"
-        className="flex h-8 items-center rounded-btn bg-fg px-3 text-[12px] font-semibold text-black transition-opacity hover:opacity-90"
+        className="hidden h-8 items-center rounded-btn bg-fg px-3 text-[12px] font-semibold text-black transition-opacity hover:opacity-90 lg:flex"
       >
         Register
       </Link>

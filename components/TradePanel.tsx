@@ -667,16 +667,11 @@ export function TradePanel({
       ) : null}
 
       {signedIn === false ? (
-        <p className="mt-2 rounded-[6px] border border-ember/40 bg-ember/10 px-3 py-2 text-[11.5px] leading-relaxed text-ember">
-          You need an account to trade.{" "}
-          <Link href="/login" className="font-medium underline underline-offset-2">
-            Sign in
+        <p className="mt-2 text-center text-[11.5px] leading-relaxed text-dim">
+          <Link href="/register" className="underline decoration-line2 underline-offset-2">
+            Register
           </Link>{" "}
-          or{" "}
-          <Link href="/register" className="font-medium underline underline-offset-2">
-            create one
-          </Link>
-          .
+          to trade.
         </p>
       ) : null}
 
