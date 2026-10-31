@@ -41,3 +41,4 @@ coverage/
 sentry.*.config.ts.bak
 app.tar.gz
 .tools/
+__pycache__/
