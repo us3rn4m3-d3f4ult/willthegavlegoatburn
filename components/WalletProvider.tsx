@@ -150,6 +150,7 @@ export function useWallet(): WalletCtx {
 export function ConnectWallet() {
   const { account, connect, disconnect, connecting, hasProvider, wrongChain, ensureChain } =
     useWallet();
+  const [copied, setCopied] = useState(false);
 
   if (!hasProvider) {
     return (
@@ -181,12 +182,46 @@ export function ConnectWallet() {
   }
 
   return (
-    <button
-      onClick={disconnect}
-      title="Click to disconnect"
-      className="num h-8 rounded-btn border border-line px-3 font-mono text-[11.5px] text-muted transition-colors hover:border-line2 hover:text-fg"
-    >
-      {account.slice(0, 6)}…{account.slice(-4)}
-    </button>
+    <div className="flex items-center gap-1">
+      <span className="num rounded-btn border border-line px-2.5 py-1.5 font-mono text-[11.5px] text-fg">
+        {account.slice(0, 6)}…{account.slice(-4)}
+      </span>
+      <button
+        onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(account);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+          } catch {
+            setCopied(false);
+          }
+        }}
+        title="Copy wallet address"
+        aria-label="Copy wallet address"
+        className="flex h-8 w-8 items-center justify-center rounded-btn border border-line text-muted transition-colors hover:border-line2 hover:text-fg"
+      >
+        {copied ? (
+          <span className="text-[12px] text-yes">✓</span>
+        ) : (
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" strokeWidth="1.8" />
+            <path
+              d="M15 5H6a1 1 0 0 0-1 1v9"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+            />
+          </svg>
+        )}
+      </button>
+      <button
+        onClick={disconnect}
+        title="Disconnect"
+        aria-label="Disconnect wallet"
+        className="flex h-8 w-8 items-center justify-center rounded-btn border border-line text-[13px] text-muted transition-colors hover:border-line2 hover:text-fg"
+      >
+        ×
+      </button>
+    </div>
   );
 }

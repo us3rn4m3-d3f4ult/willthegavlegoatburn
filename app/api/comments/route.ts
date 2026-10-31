@@ -47,6 +47,11 @@ export async function GET(req: Request) {
   const pool = getPool();
   if (!pool) return json({ ok: true, comments: [], available: false });
 
+  const url = new URL(req.url);
+  const page = Math.max(1, Number.parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
+  const perPage = Number.parseInt(url.searchParams.get("perPage") ?? "10", 10) || 10;
+  const offset = (page - 1) * perPage;
+
   const { rows } = await pool
     .query(
       `select c.id, c.body, c.created_at, c.user_id, u.username,
@@ -57,14 +62,23 @@ export async function GET(req: Request) {
          left join positions p on p.user_id = c.user_id
         where c.hidden = false
         order by c.created_at desc
-        limit $1`,
-      [LIMIT],
+        limit $1 offset $2`,
+      [perPage, offset],
     )
     .catch(() => ({ rows: [] as Row[] }));
+
+  const total = await pool
+    .query(`select count(*)::int as n from comments where hidden = false`)
+    .then((r) => (r.rows[0]?.n as number) ?? 0)
+    .catch(() => 0);
 
   return json({
     ok: true,
     available: true,
+    page,
+    perPage,
+    total,
+    pages: Math.max(1, Math.ceil(total / perPage)),
     comments: (rows as Row[]).map((r) => ({
       id: r.id,
       body: r.body,

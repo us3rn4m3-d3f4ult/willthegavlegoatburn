@@ -61,6 +61,9 @@ export default function HomePage() {
             <span className="rounded-[4px] border border-line px-2 py-1 text-[10px] font-medium text-muted">
               Base - USDC
             </span>
+            <span className="rounded-[4px] border border-ember/40 bg-ember/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-ember">
+              New
+            </span>
           </div>
 
           <h1 className="mt-4 max-w-[22ch] text-[26px] font-semibold leading-[1.15] tracking-[-0.02em] text-fg sm:text-[30px]">
@@ -122,11 +125,8 @@ export default function HomePage() {
               <span className="font-medium text-fg">No</span>, because nothing burned.
             </p>
             <p>
-              If no goat goes up at all, the market voids instead of resolving. Every share is
-              then refunded at{" "}
-              <span className="font-medium text-fg">0.50 USDC per share</span> - half the price of
-              a full pair - so a YES + NO pair returns exactly the 1 USDC it cost, and nobody is
-              left holding something worthless.
+              If no goat goes up at all, nothing burned, so it settles{" "}
+              <span className="font-medium text-fg">No</span>.
             </p>
           </div>
         </section>
@@ -135,6 +135,8 @@ export default function HomePage() {
           <OrderBook mid={MARKET.mid} />
           <RecentTrades />
         </div>
+
+        <Comments />
 
         <section className="rounded-card border border-line bg-surface p-5">
           <h2 className="text-[13px] font-semibold tracking-tight">Questions people ask</h2>
@@ -147,8 +149,6 @@ export default function HomePage() {
             ))}
           </dl>
         </section>
-
-        <Comments />
       </div>
 
       <script

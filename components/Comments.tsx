@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type Comment = { id: string; body: string; at: string; name: string; yes: number; no: number };
 
@@ -31,27 +31,37 @@ export function Comments() {
   const [available, setAvailable] = useState(true);
   const [signedIn, setSignedIn] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [text, setText] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    let alive = true;
-    fetch("/api/comments", { cache: "no-store" })
+  const load = useCallback((p: number) => {
+    setLoaded(false);
+    return fetch(`/api/comments?page=${p}`, { cache: "no-store" })
       .then((r) => r.json())
-      .then((d: { comments?: Comment[]; available?: boolean }) => {
-        if (!alive) return;
+      .then((d: { comments?: Comment[]; available?: boolean; pages?: number; total?: number }) => {
         setList(d.comments ?? []);
         setAvailable(d.available !== false);
+        setPages(d.pages ?? 1);
+        setTotal(d.total ?? (d.comments ?? []).length);
       })
-      .catch(() => alive && setAvailable(false))
-      .finally(() => alive && setLoaded(true));
+      .catch(() => setAvailable(false))
+      .finally(() => setLoaded(true));
+  }, []);
 
+  useEffect(() => {
+    load(page);
+  }, [page, load]);
+
+  useEffect(() => {
+    let alive = true;
     fetch("/api/auth/me", { cache: "no-store" })
       .then((r) => r.json())
       .then((d: { user?: unknown }) => alive && setSignedIn(Boolean(d.user)))
       .catch(() => {});
-
     return () => {
       alive = false;
     };
@@ -70,8 +80,9 @@ export function Comments() {
       });
       const data = (await res.json()) as { ok?: boolean; error?: string; comment?: Comment };
       if (res.ok && data.ok && data.comment) {
-        setList((prev) => [data.comment as Comment, ...prev]);
         setText("");
+        setPage(1);
+        load(1);
         return;
       }
       setError(ERRORS[data.error ?? ""] ?? "That didn't post. Try again.");
@@ -86,7 +97,7 @@ export function Comments() {
     <section className="rounded-card border border-line bg-surface">
       <header className="flex items-center justify-between border-b border-line px-4 py-3">
         <h2 className="text-[13px] font-semibold tracking-tight">Discussion</h2>
-        <span className="num text-[11px] text-dim">{list.length}</span>
+        <span className="num text-[11px] text-dim">{total}</span>
       </header>
 
       <div className="p-4">
@@ -156,6 +167,31 @@ export function Comments() {
             ))
           )}
         </ul>
+
+        {pages > 1 ? (
+          <nav
+            aria-label="Comment pages"
+            className="mt-3 flex items-center justify-between border-t border-line pt-3 text-[11.5px]"
+          >
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="h-7 rounded-[5px] border border-line px-2.5 text-muted transition-colors hover:border-line2 hover:text-fg disabled:opacity-40"
+            >
+              Previous
+            </button>
+            <span className="num text-dim">
+              Page {page} of {pages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(pages, p + 1))}
+              disabled={page >= pages}
+              className="h-7 rounded-[5px] border border-line px-2.5 text-muted transition-colors hover:border-line2 hover:text-fg disabled:opacity-40"
+            >
+              Next
+            </button>
+          </nav>
+        ) : null}
       </div>
     </section>
   );
