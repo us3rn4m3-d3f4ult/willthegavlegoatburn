@@ -1,0 +1,60 @@
+name: gavle
+
+services:
+  web:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: gavle-web
+    restart: unless-stopped
+    env_file:
+      - ../.env.local
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+    expose:
+      - "3000"
+    # No ports published: only Caddy can reach the app container.
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: gavle-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./certs:/certs:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+    security_opt:
+      - no-new-privileges:true
+
+  # ── added once the API/auth service exists (Day 8-11) ──────────
+  # postgres:
+  #   image: postgres:16-alpine
+  #   restart: unless-stopped
+  #   environment:
+  #     POSTGRES_USER: gavle
+  #     POSTGRES_PASSWORD_FILE: /run/secrets/pg_password
+  #     POSTGRES_DB: gavle
+  #   volumes:
+  #     - pgdata:/var/lib/postgresql/data
+  #   # deliberately no ports: the database is never exposed
+
+volumes:
+  caddy_data:
+  caddy_config:
+  # pgdata:

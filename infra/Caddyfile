@@ -1,0 +1,52 @@
+# ─────────────────────────────────────────────────────────────
+# Caddy — TLS + security headers. Two modes, pick ONE:
+#
+#  A) Cloudflare PROXIED (recommended): use a Cloudflare Origin
+#     Certificate. Put origin.pem / origin.key in ./certs and keep
+#     the `tls` line below. Cloudflare SSL/TLS mode = Full (strict).
+#
+#  B) Cloudflare DNS-ONLY (grey cloud): comment out the `tls` line
+#     and Caddy fetches a Let's Encrypt cert itself over HTTP-01.
+#     Your origin IP becomes public.
+# ─────────────────────────────────────────────────────────────
+
+{
+  admin off
+  email contact@willthegavlegoatburn.com
+  servers {
+    protocols h1 h2 h3
+  }
+}
+
+willthegavlegoatburn.com {
+  encode zstd gzip
+
+  tls /certs/origin.pem /certs/origin.key
+
+  header {
+    Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    X-Content-Type-Options "nosniff"
+    X-Frame-Options "DENY"
+    Referrer-Policy "strict-origin-when-cross-origin"
+    Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+    -Server
+  }
+
+  # Credential-endpoint rate limiting is done at Cloudflare (WAF rate rules)
+  # because `rate_limit` needs the xcaddy-built plugin, not stock caddy:2-alpine.
+  # If you later build a custom Caddy image, add it here.
+
+  reverse_proxy web:3000 {
+    header_up X-Real-IP {http.request.header.CF-Connecting-IP}
+    header_up X-Forwarded-Proto https
+  }
+
+  handle_errors {
+    respond "{err.status_code} {err.status_text}" {err.status_code}
+  }
+}
+
+
+www.willthegavlegoatburn.com {
+  redir https://willthegavlegoatburn.com{uri} permanent
+}

@@ -1,0 +1,73 @@
+# willthegavlegoatburn
+
+A non-custodial prediction market on whether the Gävle goat burns in 2026.
+Settled in USDC on Base. No fees, no house, no custody.
+
+**Status:** front-end only. Contracts, auth API and indexer are next.
+
+---
+
+## Quick start
+
+```bash
+npm install
+npm run dev          # http://localhost:3000
+npm run build        # production build (validated)
+npm run typecheck
+```
+
+> On Windows, `npm` may be blocked by the PowerShell execution policy. Use
+> `npm.cmd run dev` instead of changing machine-wide policy.
+
+---
+
+## Layout
+
+```
+app/                routes (all 13 prerender statically today)
+  page.tsx          the market
+  account/          profile shell (positions, orders, security)
+  privacy|terms|risk|cookies|legal/   legal set
+  rules/            resolution rules — the canonical public document
+  how-it-works/  goat-history/  activity/  status/  not-found
+components/         Header, Footer, AbstractAvatar, OddsBar, OrderBook,
+                    PriceChart, TradePanel, Countdown, LegalShell
+lib/                market data + formatters (swapped for on-chain reads later)
+infra/              Caddyfile, docker-compose.yml, harden.sh
+docs/               SETUP.md, WALLET_ARCHITECTURE.md, RESOLUTION_RULES.md
+```
+
+## Design tokens
+
+Black canvas `#000`, surfaces `#0B0B0D`, borders `#1C1C21`, text `#FAFAFA`.
+YES = ember `#FF5C2B → #FFB020`. NO = cold `#4C8DFF`. Radius 14px cards /
+10px controls. Tabular numerals everywhere a price appears. All tokens live in
+`app/globals.css` under `@theme`.
+
+## Non-negotiables for anything added here
+
+1. **No custody.** The server never holds user funds and never holds a key.
+2. **No fee switch.** No owner, no treasury, no withdraw over user collateral.
+3. **Account sessions cannot move funds.** Every transaction is signed by the
+   user's wallet.
+4. **The contract is the vault, not the website.** Losing the domain or the server
+   must never lose a position.
+5. **No third-party scripts in the signing flow.** Supply-chain wallet drainers are
+   the number-one theft vector.
+
+## Docs
+
+| File | What it covers |
+|---|---|
+| `docs/SETUP.md` | Server hardening, Cloudflare nameservers + DNS + TLS, email provider, deploy |
+| `docs/WALLET_ARCHITECTURE.md` | Why there is no custodial balance; ERC-4337 passkey plan |
+| `docs/RESOLUTION_RULES.md` | The frozen resolution criteria and the evidence process |
+| `.env.example` | Every variable the app will need |
+| `.env.deploy` | Server access — **gitignored, never commit** |
+
+## Legal
+
+Not affiliated with Gävle kommun, Visit Gävle or the Southern Merchants. All legal
+pages are marked **DRAFT** and require review by Dutch counsel before launch —
+particularly: whether event contracts are licensable at all in the Netherlands,
+and whether a zero-fee non-custodial front-end changes that answer.

@@ -1,0 +1,121 @@
+@import "tailwindcss";
+
+/* ────────────────────────────────────────────────────────────
+   Design tokens — black canvas, ember accent, cool counter-side.
+   ──────────────────────────────────────────────────────────── */
+@theme {
+  --color-bg: #000000;
+  --color-surface: #0b0b0d;
+  --color-surface2: #121216;
+  --color-line: #1c1c21;
+  --color-line2: #26262d;
+  --color-fg: #fafafa;
+  --color-muted: #8b8b93;
+  --color-dim: #5a5a62;
+  --color-yes: #ff5c2b;
+  --color-ember: #ffb020;
+  --color-no: #4c8dff;
+
+  --radius-card: 14px;
+  --radius-btn: 10px;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI Variable Text",
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background-color: var(--color-bg);
+  color: var(--color-fg);
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Prices and sizes never shimmy as they update. */
+.num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-yes) 35%, transparent);
+  color: #fff;
+}
+
+*:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-yes) 75%, transparent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Thin, unobtrusive scrollbars on the order book. */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #2a2a31 transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* ────────────────────────────────────────────────────────────
+   Long-form / legal document typography
+   ──────────────────────────────────────────────────────────── */
+.legal {
+  color: var(--color-muted);
+  font-size: 13.5px;
+  line-height: 1.75;
+}
+.legal h2 {
+  color: var(--color-fg);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-top: 2.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--color-line);
+}
+.legal h2:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+.legal p {
+  margin-top: 0.75rem;
+}
+.legal ul {
+  margin-top: 0.75rem;
+  padding-left: 1.1rem;
+  list-style: disc;
+}
+.legal li {
+  margin-top: 0.4rem;
+}
+.legal strong {
+  color: var(--color-fg);
+  font-weight: 600;
+}
+.legal a {
+  color: var(--color-fg);
+  text-decoration: underline;
+  text-decoration-color: var(--color-line2);
+  text-underline-offset: 2px;
+}
+.legal a:hover {
+  text-decoration-color: var(--color-muted);
+}
+
