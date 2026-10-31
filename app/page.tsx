@@ -5,6 +5,7 @@ import { TradePanel } from "@/components/TradePanel";
 import { Comments } from "@/components/Comments";
 import { LiveMarket } from "@/components/LiveMarket";
 import { OrderBookLive } from "@/components/OrderBookLive";
+import { RecentTrades } from "@/components/RecentTrades";
 import { TradeProvider } from "@/components/TradeProvider";
 import { HowTradingWorks } from "@/components/HowTradingWorks";
 import { MobileTradeBar } from "@/components/MobileTradeBar";
@@ -77,6 +78,8 @@ export default function HomePage() {
         </section>
 
         <OrderBookLive />
+
+        <RecentTrades />
 
         <section className="rounded-card border border-line bg-surface p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">

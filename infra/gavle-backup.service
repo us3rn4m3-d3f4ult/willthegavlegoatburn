@@ -1,0 +1,11 @@
+[Unit]
+Description=Nightly Postgres dump for willthegavlegoatburn
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/gavle-backup.sh
+
+[Install]
+WantedBy=multi-user.target

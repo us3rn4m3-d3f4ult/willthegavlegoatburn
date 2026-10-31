@@ -78,15 +78,27 @@ create table if not exists price_points (
 
 create index if not exists price_points_at_idx on price_points (at desc);
 
--- Incremental trade scanner state. Alchemy's free tier allows only a 10-block
--- eth_getLogs range, so we walk forward in chunks and remember where we stopped.
-create table if not exists trade_stats (
-  id         int primary key default 1,
-  last_block bigint not null default 0,
-  volume     numeric not null default 0,
-  traders    jsonb not null default '[]'::jsonb,
-  updated_at timestamptz not null default now()
+-- One row per OrderFilled event, so the site can show real trades instead of
+-- scanning logs on every page load (Alchemy's free tier allows only 10 blocks
+-- per eth_getLogs call, which is why this is filled in by the incremental scan).
+create table if not exists fills (
+  id          int primary key default 1 check (id = 1),
+  last_block  bigint not null default 0,
+  updated_at  timestamptz not null default now()
 );
+
+create table if not exists trades (
+  block       bigint not null,
+  log_index   int not null,
+  order_id    bigint not null,
+  taker       text not null,
+  shares      numeric not null,
+  usdc        numeric not null,
+  at          timestamptz not null default now(),
+  primary key (block, log_index)
+);
+
+create index if not exists trades_block_idx on trades (block desc);
 `;
 
 export function getPool(): Pool | null {

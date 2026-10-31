@@ -82,9 +82,9 @@ export async function GET() {
     return json({ configured: true, error: "rpc_unavailable" }, 503);
   }
 
-  // Fills, scanned forward in 10-block chunks (Alchemy free tier limit) and
-  // persisted so each run only covers new blocks. Row 2 is the order book: row 1
-  // holds totals from the retired AMM and must not be mixed in.
+  // Fills: walk forward in 10-block chunks (Alchemy free tier limit), store each
+  // OrderFilled row, then total from the table. One scan powers the volume,
+  // the trader count and the trade feed.
   let volume: number | null = null;
   let traders: number | null = null;
   try {
@@ -92,17 +92,10 @@ export async function GET() {
     const latest = await publicClient.getBlockNumber();
 
     let lastBlock = 0n;
-    let sum = 0;
-    let seen: string[] = [];
-
     if (pool) {
-      await pool.query(`insert into trade_stats (id) values (2) on conflict (id) do nothing`);
-      const { rows } = await pool.query(
-        `select last_block, volume::text as volume, traders from trade_stats where id = 2`,
-      );
+      await pool.query(`insert into fills (id) values (1) on conflict (id) do nothing`);
+      const { rows } = await pool.query(`select last_block from fills where id = 1`);
       lastBlock = BigInt(rows[0]?.last_block ?? 0);
-      sum = Number(rows[0]?.volume ?? 0);
-      seen = (rows[0]?.traders as string[]) ?? [];
     }
 
     const floor = latest > 5_000n ? latest - 5_000n : 0n;
@@ -115,7 +108,7 @@ export async function GET() {
       ranges.push([b, b + CHUNK - 1n > latest ? latest : b + CHUNK - 1n]);
     }
 
-    const set = new Set(seen);
+    const found: [string, number, string, string, string, string][] = [];
     for (let i = 0; i < ranges.length; i += CONCURRENCY) {
       const batch = ranges.slice(i, i + CONCURRENCY);
       const results = await Promise.all(
@@ -127,24 +120,46 @@ export async function GET() {
       );
       for (const logs of results) {
         for (const log of logs) {
-          const args = log.args as { taker?: string; usdcAmount?: bigint };
-          if (args.usdcAmount) sum += Number(args.usdcAmount) / 1e6;
-          if (args.taker) set.add(args.taker.toLowerCase());
+          const args = log.args as { id?: bigint; taker?: string; shares?: bigint; usdcAmount?: bigint };
+          if (args.taker === undefined || args.id === undefined) continue;
+          found.push([
+            String(log.blockNumber ?? 0n),
+            Number(log.logIndex ?? 0),
+            String(args.id),
+            args.taker.toLowerCase(),
+            (Number(args.shares ?? 0n) / 1e6).toFixed(6),
+            (Number(args.usdcAmount ?? 0n) / 1e6).toFixed(6),
+          ]);
         }
       }
     }
 
-    volume = sum;
-    traders = set.size;
-
     if (pool) {
+      for (const r of found) {
+        await pool
+          .query(
+            `insert into trades (block, log_index, order_id, taker, shares, usdc)
+             values ($1, $2, $3, $4, $5, $6) on conflict (block, log_index) do nothing`,
+            r,
+          )
+          .catch(() => {});
+      }
       await pool
-        .query(
-          `update trade_stats set last_block = $1, volume = $2, traders = $3::jsonb, updated_at = now()
-           where id = 2`,
-          [latest.toString(), sum.toString(), JSON.stringify([...set].slice(0, 500))],
-        )
+        .query(`update fills set last_block = $1, updated_at = now() where id = 1`, [
+          latest.toString(),
+        ])
         .catch(() => {});
+
+      const totals = await pool
+        .query(
+          `select coalesce(sum(usdc), 0)::text as volume, count(distinct taker)::int as traders from trades`,
+        )
+        .catch(() => ({ rows: [] as { volume: string; traders: number }[] }));
+      volume = Number(totals.rows[0]?.volume ?? 0);
+      traders = Number(totals.rows[0]?.traders ?? 0);
+    } else {
+      volume = 0;
+      traders = 0;
     }
   } catch {
     volume = null;

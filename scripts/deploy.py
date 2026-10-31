@@ -95,6 +95,13 @@ def main() -> int:
             f"|| echo 'WARN: Caddyfile invalid — old config left running'",
             "sleep 4",
             f"docker compose -f {REMOTE_DIR}/infra/docker-compose.yml ps",
+            # A silent build-arg failure once shipped an image with an empty
+            # NEXT_PUBLIC_RPC_URL: the site served fine while every read failed.
+            # Fail the deploy instead of discovering it from the browser.
+            "docker exec gavle-web wget -qO- http://127.0.0.1:3000/api/orders 2>/dev/null "
+            "| grep -q 'rpc_unavailable' "
+            "&& { echo 'FAIL: app cannot reach the RPC (check NEXT_PUBLIC_RPC_URL build arg)'; exit 1; } "
+            "|| echo 'app RPC check ok'",
         ]
         rc = 0
         for cmd in steps:
