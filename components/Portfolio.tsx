@@ -91,7 +91,7 @@ export function Portfolio() {
       <section className="rounded-card border border-line bg-surface p-4">
         <h2 className="text-[13px] font-semibold tracking-tight">Your money</h2>
         <p className="mt-2 text-[12.5px] leading-relaxed text-muted">
-          Connect a wallet to see your balance and positions.
+          Create an account, then connect a wallet, to see your balance and positions.
         </p>
       </section>
     );

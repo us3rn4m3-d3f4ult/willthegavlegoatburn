@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useSession } from "@/components/useSession";
 import {
   BOOK_ABI,
   BOOK_ADDRESS,
@@ -49,6 +51,7 @@ export function TradePanel({
   anchor?: boolean;
 }) {
   const { account, connect, ensureChain, walletClient } = useWallet();
+  const router = useRouter();
   const { pick, bump, version, sideRequest } = useTradeState();
 
   const [isYes, setIsYes] = useState(true);
@@ -63,19 +66,7 @@ export function TradePanel({
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [fill, setFill] = useState<{ value: number; label: string } | null>(null);
-  const [signedIn, setSignedIn] = useState<boolean | null>(null);
-
-  // Signed in = has a site account. A connected wallet alone is not enough.
-  useEffect(() => {
-    let alive = true;
-    fetch("/api/auth/me", { cache: "no-store" })
-      .then((r) => r.json() as Promise<{ user?: unknown }>)
-      .then((d) => alive && setSignedIn(Boolean(d.user)))
-      .catch(() => alive && setSignedIn(null));
-    return () => {
-      alive = false;
-    };
-  }, []);
+  const signedIn = useSession();
 
   // Clicking a price in the book loads it here as a limit price.
   useEffect(() => {
@@ -328,7 +319,7 @@ export function TradePanel({
 
   async function submit() {
     if (signedIn !== true) {
-      setStatus("You need an account to trade. Sign in or create one first.");
+      router.push("/register");
       return;
     }
     if (!BOOK_CONFIGURED) {
@@ -411,13 +402,15 @@ export function TradePanel({
   const unitLabel = mode === "market" && action === "buy" ? "USDC" : "shares";
   const label = !BOOK_CONFIGURED
     ? "Market not deployed"
-    : !account
-      ? "Connect wallet to trade"
-      : busy
-        ? "Working…"
-        : mode === "market"
-          ? `${action === "buy" ? "Buy" : "Sell"} ${isYes ? "Yes" : "No"} at market`
-          : `${action === "buy" ? "Place bid" : "Place ask"} · ${Number(priceCents).toFixed(1)}¢`;
+    : signedIn !== true
+      ? "Register to trade"
+      : !account
+        ? "Connect wallet to trade"
+        : busy
+          ? "Working…"
+          : mode === "market"
+            ? `${action === "buy" ? "Buy" : "Sell"} ${isYes ? "Yes" : "No"} at market`
+            : `${action === "buy" ? "Place bid" : "Place ask"} · ${Number(priceCents).toFixed(1)}¢`;
 
   return (
     <section
@@ -643,7 +636,7 @@ export function TradePanel({
       <button
         type="button"
         onClick={submit}
-        disabled={busy || !BOOK_CONFIGURED || noLiquidity || signedIn !== true}
+        disabled={busy || !BOOK_CONFIGURED || (signedIn === true && Boolean(account) && noLiquidity)}
         className={`mt-4 h-11 w-full rounded-btn text-[13px] font-semibold transition-opacity disabled:cursor-not-allowed disabled:opacity-40 ${
           action === "buy" ? "bg-fg text-black hover:opacity-90" : "bg-surface2 text-fg hover:opacity-90"
         }`}

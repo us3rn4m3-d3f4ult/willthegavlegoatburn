@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { TradePanel } from "@/components/TradePanel";
 import { useTradeState } from "@/components/TradeProvider";
+import { useSession } from "@/components/useSession";
 
 type Book = { asks: { price: number; isYes: boolean }[]; bids: { price: number; isYes: boolean }[] };
 
 /** Sticky bar at the bottom of the screen on mobile; opens the panel as a sheet. */
 export function MobileTradeBar() {
   const { pick, requestSide } = useTradeState();
+  const signedIn = useSession();
   const [open, setOpen] = useState(false);
   const [yes, setYes] = useState(0.5);
 
@@ -49,7 +52,15 @@ export function MobileTradeBar() {
         className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-black/95 px-3 pt-2 backdrop-blur lg:hidden"
         style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom))" }}
       >
-        <div className="flex gap-2">
+        {signedIn === false ? (
+          <Link
+            href="/register"
+            className="flex h-11 items-center justify-center rounded-btn bg-fg text-[13px] font-semibold text-black"
+          >
+            Register to trade
+          </Link>
+        ) : null}
+        <div className={signedIn === false ? "hidden" : "flex gap-2"}>
           <button
             type="button"
             onClick={() => {

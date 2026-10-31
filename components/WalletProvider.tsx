@@ -3,6 +3,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { createWalletClient, custom, type Address, type WalletClient } from "viem";
 import { createPortal } from "react-dom";
+import Link from "next/link";
+import { useSession } from "@/components/useSession";
 import { CHAIN_ID_PUBLIC, chain } from "@/lib/web3";
 
 type Eip1193 = {
@@ -189,6 +191,7 @@ export function useWallet(): WalletCtx {
 export function ConnectWallet() {
   const { account, connect, disconnect, connecting, hasProvider, wrongChain, ensureChain, wallets } =
     useWallet();
+  const signedIn = useSession();
   const [copied, setCopied] = useState(false);
   const [open, setOpen] = useState(false);
   // The header has backdrop-blur, which makes position:fixed children position
@@ -197,6 +200,22 @@ export function ConnectWallet() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   const anyProvider = hasProvider || wallets.length > 0;
+
+  // Account comes first: a wallet is useless here until there is a user behind it.
+  if (signedIn === null) {
+    return <span className="h-8 w-[92px] animate-pulse rounded-btn bg-surface2" aria-hidden />;
+  }
+
+  if (signedIn === false) {
+    return (
+      <Link
+        href="/register"
+        className="flex h-8 items-center rounded-btn bg-fg px-3 text-[12px] font-semibold text-black transition-opacity hover:opacity-90"
+      >
+        Register
+      </Link>
+    );
+  }
 
   if (!anyProvider) {
     return <span className="hidden text-[11.5px] text-dim sm:inline">No wallet detected</span>;
