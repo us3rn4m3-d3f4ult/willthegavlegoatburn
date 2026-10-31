@@ -11,8 +11,10 @@ type Level = { id: number; price: number; shares: number; maker: string; isYes: 
  * so it needs no indexer and no log scanning. Order counts are small by design
  * (the contract caps open orders per wallet at 32).
  */
-export async function GET() {
-  if (!BOOK_CONFIGURED) return json({ configured: false, asks: [], bids: [] });
+export async function GET(req: Request) {
+  const maker = new URL(req.url).searchParams.get("maker")?.toLowerCase() ?? "";
+  if (!BOOK_CONFIGURED) return json({ configured: false, asks: [], bids: [], mine: [] });
+
 
   try {
     const [count, trading] = await Promise.all([
@@ -34,10 +36,11 @@ export async function GET() {
 
     const asks: Level[] = [];
     const bids: Level[] = [];
+    const mine: Level[] = [];
 
     raw.forEach((o, i) => {
       if (!o) return;
-      const [maker, isYes, isAsk, active, expiresAt, shares, price] = o as readonly [
+      const [makerAddr, isYes, isAsk, active, expiresAt, shares, price] = o as readonly [
         string,
         boolean,
         boolean,
@@ -52,17 +55,19 @@ export async function GET() {
         id: Number(ids[i]),
         price: Number(price) / 1e18,
         shares: Number(shares) / 1e6,
-        maker,
+        maker: makerAddr,
         isYes,
       };
+      if (maker && makerAddr.toLowerCase() === maker) mine.push(level);
       (isAsk ? asks : bids).push(level);
     });
 
     asks.sort((a, b) => a.price - b.price);
     bids.sort((a, b) => b.price - a.price);
+    mine.sort((a, b) => b.id - a.id);
 
-    return json({ configured: true, trading: Boolean(trading), asks, bids, count: total });
+    return json({ configured: true, trading: Boolean(trading), asks, bids, mine, count: total });
   } catch {
-    return json({ configured: true, error: "rpc_unavailable", asks: [], bids: [] }, 503);
+    return json({ configured: true, error: "rpc_unavailable", asks: [], bids: [], mine: [] }, 503);
   }
 }

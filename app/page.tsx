@@ -2,12 +2,12 @@ import Link from "next/link";
 import { MARKET, GOAT_HISTORY, TRADES } from "@/lib/market";
 import { Countdown } from "@/components/Countdown";
 import { OddsBar } from "@/components/OddsBar";
-import { OrderBook } from "@/components/OrderBook";
 import { PriceChart } from "@/components/PriceChart";
 import { TradePanel } from "@/components/TradePanel";
 import { Comments } from "@/components/Comments";
 import { LiveMarket } from "@/components/LiveMarket";
-import { BookPanel } from "@/components/BookPanel";
+import { OrderBookLive } from "@/components/OrderBookLive";
+import { TradeProvider } from "@/components/TradeProvider";
 import { fmtCompact, fmtUsd } from "@/lib/format";
 import { FAQ, SITE, faqJsonLd } from "@/lib/seo";
 import type { Metadata } from "next";
@@ -53,7 +53,8 @@ function RecentTrades() {
 
 export default function HomePage() {
   return (
-    <div className="grid gap-6 py-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8">
+    <TradeProvider>
+      <div className="grid gap-6 py-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8">
       <div className="min-w-0 space-y-6">
         <section className="rounded-card border border-line bg-surface p-6">
           <div className="flex flex-wrap items-center gap-2">
@@ -122,15 +123,28 @@ export default function HomePage() {
           </div>
         </section>
 
-        <BookPanel />
+        <OrderBookLive />
 
         <section className="rounded-card border border-line bg-surface p-5">
-          <h2 className="text-[13px] font-semibold tracking-tight">Recent trades</h2>
-          <p className="mt-2 text-[12px] leading-relaxed text-muted">
-            Trading runs against an AMM, so an order always fills and the price moves with the
-            pool. A limit order book is deployed alongside it and its resting orders are listed
-            above, read straight from the contract.
-          </p>
+          <h2 className="text-[13px] font-semibold tracking-tight">How trading works here</h2>
+          <div className="mt-2 max-w-[70ch] space-y-2 text-[12.5px] leading-relaxed text-muted">
+            <p>
+              <span className="font-medium text-fg">Market order</span> — say how much USDC you
+              want to spend (or how many shares you want to sell) and the panel walks the book,
+              cheapest offer first, filling every level it needs. You always see the worst price
+              before you sign.
+            </p>
+            <p>
+              <span className="font-medium text-fg">Limit order</span> — pick a price, post a bid
+              or an ask, and it rests in the book until someone takes it. Click any price in the
+              order book to load it straight into the panel.
+            </p>
+            <p>
+              Your USDC sits in the contract, not with us. Selling needs shares, and shares come
+              from splitting USDC 1:1 into one Yes and one No — the panel does that for you when
+              you need it, and you can withdraw at any time.
+            </p>
+          </div>
         </section>
 
         <Comments />
@@ -156,6 +170,7 @@ export default function HomePage() {
       <aside className="h-fit space-y-4 lg:sticky lg:top-24">
         <TradePanel mid={MARKET.mid} />
       </aside>
-    </div>
+      </div>
+    </TradeProvider>
   );
 }
