@@ -32,9 +32,6 @@ const SITE_ORIGIN = process.env.NEXT_PUBLIC_SITE_ORIGIN ?? "https://willthegavle
 export const publicClient = createPublicClient({
   chain,
   transport: http(RPC_URL, {
-    // Pack concurrent reads into fewer HTTP round-trips; the order book used to
-    // make one request per resting order, which is why it crawled.
-    batch: { batchSize: 100, wait: 0 },
     ...(typeof window === "undefined" ? { fetchOptions: { headers: { origin: SITE_ORIGIN } } } : {}),
   }),
 });

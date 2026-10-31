@@ -347,17 +347,25 @@ export function TradePanel({
     }
     if (!w || !account) return;
 
-    // Funding happens in its own step now, so just verify it before placing.
+    // One click, but never blindly: fund first (approve → wait for the allowance to
+    // be visible → deposit → wait for the credit to be visible), then place.
     const fresh = await loadBalances();
-    if (action === "buy" && (fresh?.usdc ?? 0) + 1e-9 < usdcNeeded) {
-      setStatus("Deposit the USDC first, then place the order.");
-      return;
+    if (action === "buy") {
+      const short = usdcNeeded - (fresh?.usdc ?? 0);
+      if (short > 1e-9) {
+        if (fresh && fresh.wallet + 1e-9 < short) {
+          setStatus(
+            `That order needs $${usdcNeeded.toFixed(2)}. Your wallet holds $${fresh.wallet.toFixed(2)} USDC.`,
+          );
+          return;
+        }
+        if (!(await fundUsdc(short))) return;
+      }
     }
     if (action === "sell") {
       const held = isYes ? (fresh?.freeYes ?? 0) : (fresh?.freeNo ?? 0);
       const short = Math.max(0, value - held);
       if (short > 0) {
-        setFill({ value: 0, label: "getting shares" });
         if (!(await mintShares(short))) return;
       }
     }
@@ -451,34 +459,6 @@ export function TradePanel({
       setStatus("That size is under 1 share — raise the amount.");
       return;
     }
-    // Two explicit steps: fund the market, then place. Doing both in one click is
-    // what kept failing — the order was simulated before the node serving the
-    // simulation had seen the deposit.
-    if (mode === "limit" && action === "buy") {
-      const fresh = await loadBalances();
-      const short = usdcNeeded - (fresh?.usdc ?? 0);
-      if (short > 1e-9) {
-        if (fresh && fresh.wallet + 1e-9 < short) {
-          setStatus(
-            `That order needs $${usdcNeeded.toFixed(2)}. Your wallet holds $${fresh.wallet.toFixed(2)} USDC.`,
-          );
-          return;
-        }
-        setBusy(true);
-        try {
-          await fundUsdc(short);
-          setStatus(
-            `Deposited $${short.toFixed(2)} into the market. Press the button again to place the order.`,
-          );
-        } catch (err) {
-          setStatus(explain(err));
-        } finally {
-          setBusy(false);
-          void loadBalances();
-        }
-        return;
-      }
-    }
 
     setBusy(true);
     setStatus("");
@@ -545,7 +525,7 @@ export function TradePanel({
         : busy
           ? "Working…"
           : needsDeposit
-            ? `Deposit $${usdcNeeded.toFixed(2)} USDC`
+            ? `Buy ${isYes ? "Yes" : "No"} · $${usdcNeeded.toFixed(2)}`
             : mode === "market"
               ? `${action === "buy" ? "Buy" : "Sell"} ${isYes ? "Yes" : "No"} at market`
               : `${action === "buy" ? "Place bid" : "Place ask"} · ${Number(priceCents).toFixed(1)}¢`;
