@@ -51,6 +51,10 @@ export default function HowItWorksPage() {
       </ol>
 
       <h2 className="mt-10 text-[13px] font-semibold text-fg">What we do not do</h2>
+      <p className="mt-3 text-[12.5px] text-muted">
+        Every trader needs an account. Accounts are for the leaderboard and comments, not
+        for money: deposits and orders live in the contract, tied to your wallet.
+      </p>
       <ul className="mt-3 space-y-1.5 text-[12.5px] text-muted">
         <li>We do not hold your USDC, and there is no account balance to withdraw from.</li>
         <li>We do not charge a fee, take a cut, or subsidise liquidity.</li>

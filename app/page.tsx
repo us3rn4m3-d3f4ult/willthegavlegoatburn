@@ -1,8 +1,6 @@
 import Link from "next/link";
-import { MARKET, GOAT_HISTORY, TRADES } from "@/lib/market";
+import { MARKET, GOAT_HISTORY } from "@/lib/market";
 import { Countdown } from "@/components/Countdown";
-import { OddsBar } from "@/components/OddsBar";
-import { PriceChart } from "@/components/PriceChart";
 import { TradePanel } from "@/components/TradePanel";
 import { Comments } from "@/components/Comments";
 import { LiveMarket } from "@/components/LiveMarket";
@@ -26,30 +24,6 @@ function Stat({ label, value }: { label: string; value: React.ReactNode }) {
       <dt className="text-[10.5px] font-medium uppercase tracking-[0.1em] text-dim">{label}</dt>
       <dd className="num mt-1 text-[14px] font-medium text-fg">{value}</dd>
     </div>
-  );
-}
-
-function RecentTrades() {
-  return (
-    <section className="overflow-hidden rounded-card border border-line bg-surface">
-      <header className="flex items-center justify-between border-b border-line px-4 py-3">
-        <h2 className="text-[13px] font-semibold tracking-tight">Recent trades</h2>
-        <span className="text-[11px] text-dim">live</span>
-      </header>
-      <ul className="divide-y divide-line">
-        {TRADES.map((t, i) => (
-          <li key={i} className="flex items-center justify-between px-4 py-2.5 text-[12.5px]">
-            <span className={`font-medium ${t.side === "YES" ? "text-yes" : "text-no"}`}>
-              {t.side === "YES" ? "Buy Yes" : "Buy No"}
-            </span>
-            <span className="num text-muted">
-              {(t.price * 100).toFixed(1)}c - {fmtCompact(t.size)}
-            </span>
-            <span className="num w-9 text-right text-dim">{t.ago}</span>
-          </li>
-        ))}
-      </ul>
-    </section>
   );
 }
 

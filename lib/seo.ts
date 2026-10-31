@@ -38,6 +38,10 @@ export const FAQ: FaqItem[] = [
     a: "An open-source community project, not a company. The market is a smart contract on Base and the whole thing is public at github.com/us3rn4m3-d3f4ult/willthegavlegoatburn, so anyone can read the rules and check that the contract does what this page says. It is not affiliated with Polymarket or any exchange — Polymarket does not currently list a Gävle goat market, which is why a group of people who follow the goat built one themselves.",
   },
   {
+    q: "Do I need an account to trade?",
+    a: "Yes. Create one with your email and a password, then connect a wallet. The account is what puts a name on your comments and your position; the money never touches it, because deposits and orders live in the contract and only your wallet can move them.",
+  },
+  {
     q: "Is this custodial? Does it hold my funds?",
     a: "No. Your USDC sits in a smart contract on Base and only your wallet can move it. There is no account balance to withdraw from and no operator key that can touch your position.",
   },

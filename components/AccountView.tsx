@@ -140,8 +140,8 @@ export function AccountView() {
     return (
       <div className="rounded-card border border-line bg-surface p-5">
         <p className="text-[12.5px] text-muted">
-          You are not signed in. An account is optional — you can trade with a wallet
-          alone, and an account can never move funds.
+          You are not signed in. You need an account to trade. It holds no funds: your USDC
+          stays in the contract and only your wallet can move it.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <Link

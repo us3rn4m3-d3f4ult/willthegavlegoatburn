@@ -89,13 +89,13 @@ YES = ember `#FF5C2B → #FFB020`. NO = cold `#4C8DFF`. Radius 14px cards /
 
 | File | What it covers |
 |---|---|
-| `docs/SETUP.md` | Server hardening, Cloudflare nameservers + DNS + TLS, email provider, deploy |
-| `docs/SEO.md` | What's automated, the 20-minute Search Console step, content + backlink plan |
+| `docs/SETUP.md` | Server hardening, Cloudflare DNS + TLS, firewall, deploy |
+| `docs/SEO.md` | What's automated, the Search Console step, content + backlink plan |
 | `docs/DEPLOY_CONTRACT.md` | Faucets, deploy commands, and the mainnet checklist |
-| `docs/WALLET_ARCHITECTURE.md` | Why there is no custodial balance; ERC-4337 passkey plan |
 | `docs/RESOLUTION_RULES.md` | The frozen resolution criteria and the evidence process |
-| `.env.example` | Every variable the app will need |
-| `.env.deploy` | Server access — **gitignored, never commit** |
+| `docs/ORDERBOOK.md` | How the order book works: orders, fills, deposits, splits |
+| `docs/ACCOUNTS.md` | Registration, sessions, recovery codes, deletion |
+| `.env.example` | Every variable the app needs |
 
 ## Legal
 

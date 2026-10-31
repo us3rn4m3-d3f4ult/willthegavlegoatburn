@@ -327,6 +327,10 @@ export function TradePanel({
   }
 
   async function submit() {
+    if (signedIn !== true) {
+      setStatus("You need an account to trade. Sign in or create one first.");
+      return;
+    }
     if (!BOOK_CONFIGURED) {
       setStatus("No order book deployed yet.");
       return;
@@ -639,7 +643,7 @@ export function TradePanel({
       <button
         type="button"
         onClick={submit}
-        disabled={busy || !BOOK_CONFIGURED || noLiquidity}
+        disabled={busy || !BOOK_CONFIGURED || noLiquidity || signedIn !== true}
         className={`mt-4 h-11 w-full rounded-btn text-[13px] font-semibold transition-opacity disabled:cursor-not-allowed disabled:opacity-40 ${
           action === "buy" ? "bg-fg text-black hover:opacity-90" : "bg-surface2 text-fg hover:opacity-90"
         }`}
@@ -669,13 +673,17 @@ export function TradePanel({
         </p>
       ) : null}
 
-      {account && signedIn === false ? (
+      {signedIn === false ? (
         <p className="mt-2 rounded-[6px] border border-ember/40 bg-ember/10 px-3 py-2 text-[11.5px] leading-relaxed text-ember">
-          This wallet is not signed in.{" "}
-          <Link href="/register" className="font-medium underline underline-offset-2">
-            Create an account
+          You need an account to trade.{" "}
+          <Link href="/login" className="font-medium underline underline-offset-2">
+            Sign in
           </Link>{" "}
-          to trade.
+          or{" "}
+          <Link href="/register" className="font-medium underline underline-offset-2">
+            create one
+          </Link>
+          .
         </p>
       ) : null}
 
