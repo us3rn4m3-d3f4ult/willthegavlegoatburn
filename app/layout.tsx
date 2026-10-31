@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { WalletProvider } from "@/components/WalletProvider";
 import { SITE, orgJsonLd, websiteJsonLd } from "@/lib/seo";
 
 export const metadata: Metadata = {
@@ -72,11 +73,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         >
           Skip to content
         </a>
-        <Header />
-        <main id="main" className="mx-auto max-w-[1120px] px-6">
-          {children}
-        </main>
-        <Footer />
+        <WalletProvider>
+          <Header />
+          <main id="main" className="mx-auto max-w-[1120px] px-6">
+            {children}
+          </main>
+          <Footer />
+        </WalletProvider>
       </body>
     </html>
   );

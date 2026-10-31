@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AbstractAvatar } from "./AbstractAvatar";
+import { ConnectWallet } from "./WalletProvider";
 
 export function Header({ seed = "guest" }: { seed?: string }) {
   return (
@@ -18,13 +19,16 @@ export function Header({ seed = "guest" }: { seed?: string }) {
           </span>
         </Link>
 
-        <Link
-          href="/account"
-          aria-label="Your account"
-          className="inline-flex items-center rounded-[9px] ring-1 ring-line2 transition-all hover:brightness-110"
-        >
-          <AbstractAvatar seed={seed} size={32} />
-        </Link>
+        <div className="flex items-center gap-2">
+          <ConnectWallet />
+          <Link
+            href="/account"
+            aria-label="Your account"
+            className="inline-flex items-center rounded-[9px] ring-1 ring-line2 transition-all hover:brightness-110"
+          >
+            <AbstractAvatar seed={seed} size={32} />
+          </Link>
+        </div>
       </div>
     </header>
   );
