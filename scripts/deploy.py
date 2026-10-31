@@ -23,8 +23,8 @@ ROOT = Path(__file__).resolve().parent.parent
 REMOTE_DIR = "/home/deploy/gavle"
 TARBALL = ROOT / "_deploy.tar.gz"
 SKIP = {
-    "node_modules", ".next", ".git", ".env.deploy", ".env.local", "certs",
-    "_deploy.tar.gz", "app.tar.gz", "out", "coverage", "__pycache__",
+    "node_modules", ".next", ".git", ".tools", ".env.deploy", ".env.local", "certs",
+    "_deploy.tar.gz", "app.tar.gz", "out", "cache", "coverage", "__pycache__", "broadcast",
 }
 
 

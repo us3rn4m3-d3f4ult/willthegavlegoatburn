@@ -103,23 +103,35 @@ Encrypt cert over plain HTTP-01 with nothing in the way. Confirm in
 | A | `@` | `148.135.185.56` | **Proxied** (orange) |
 | CNAME | `www` | `willthegavlegoatburn.com` | **Proxied** (orange) |
 
-Then do 2.6 (SSL mode + Always Use HTTPS). This order matters: with the proxy on
-*and* "Always Use HTTPS" set **before** an origin certificate exists, the ACME
-HTTP-01 challenge gets redirected at the Cloudflare edge and certificate issuance
-deadlocks.
+> ⚠️ The CNAME target must be the **full hostname including `.com`**. Typing
+> `willthegavlegoatburn` makes Cloudflare return **530 (Origin DNS error)** on
+> `www.` while the apex keeps working — a confusing half-broken state.
+
+Then do 2.6 (SSL mode + Always Use HTTPS).
+
+**What actually happened on this deployment:** the A record was proxied from the
+start, so Let's Encrypt HTTP-01 could never complete — Cloudflare terminates and
+redirects the challenge before it reaches the origin, and the site returned
+**525 SSL Handshake Failed** until a Cloudflare Origin Certificate was installed.
+That is exactly the failure mode the two phases above exist to avoid.
 
 No `AAAA` record — the box has no IPv6.
 
+---
+
+### 2.6 TLS
 
 Set **SSL/TLS → Overview → Full (strict)**.
 
-Caddy now fetches its own Let's Encrypt certificate, which satisfies Full (strict)
-because a publicly-trusted cert is presented at the origin — **no Origin
-Certificate is required.** (The `tls /certs/origin.pem` line in `infra/Caddyfile`
-is commented out and is an optional upgrade: pinned 15-year cert, no external
-issuance. If you want it: SSL/TLS → Origin Server → Create Certificate, save as
-`infra/certs/origin.pem` + `origin.key` on the server, uncomment the line, restart
-Caddy.)
+The origin uses a **Cloudflare Origin Certificate**, installed at
+`infra/certs/origin.pem` + `origin.key` on the server (gitignored, mode 600, valid
+to 2041, covering the apex and `*.willthegavlegoatburn.com`). It is signed by
+Cloudflare's own Origin CA, so Full (strict) is satisfied and there is no renewal
+to manage.
+
+Caddy refuses to start if those files are missing — intentional, so a missing
+certificate can never silently downgrade the site to HTTP. Regenerate at
+**SSL/TLS → Origin Server → Create Certificate** and re-upload both files.
 
 Then **SSL/TLS → Edge Certificates**: Always Use HTTPS **on** · HSTS **on**
 (start at 6 months; raise to 1 year + preload once you're sure) · Minimum TLS
