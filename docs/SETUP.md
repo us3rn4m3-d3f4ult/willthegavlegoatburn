@@ -149,6 +149,38 @@ Then **SSL/TLS → Edge Certificates**: Always Use HTTPS **on** · HSTS **on**
   `/register*` → 10 requests / 1 min per IP.
 - **Security → Settings → Under Attack Mode** stays off; use it only during an attack.
 
+### 2.8 Close the origin to everything but Cloudflare
+
+`ufw allow 80/443` **does not work on a Docker host.** Docker installs its own
+iptables rules for published ports ahead of ufw's chains, so the origin stays
+reachable directly and ufw will happily report "deny" while the app answers on
+port 443. Two consequences, both real:
+
+- anyone who learns the origin IP can bypass Cloudflare's WAF and rate limits;
+- they can also send `CF-Connecting-IP: <anything>`, which Caddy used to forward
+  to the app as `X-Real-IP` — so per-IP limits on login and recovery were
+  bypassable by rotating one header.
+
+Fix, on the server as root:
+
+```bash
+bash infra/cf-only-firewall.sh          # writes the DOCKER-USER chain
+systemctl enable --now cf-firewall      # infra/cf-firewall.service, re-applies on boot
+curl -sk --max-time 5 https://127.0.0.1/ -o /dev/null -w '%{http_code}\n'   # from elsewhere: must fail
+```
+
+`infra/cf-only-firewall.sh` allows only `cloudflare.com/ips` through to 80/443
+and drops the rest; `infra/cf-firewall.service` runs it after Docker starts. If
+Cloudflare ever publishes new ranges, update the script and both the script's
+list and `trusted_proxies` in `infra/Caddyfile`.
+
+Verifying from outside — with `ORIGIN_IP` being the box, not the Cloudflare IPs:
+
+```bash
+curl -sk --max-time 5 --resolve willthegavlegoatburn.com:443:$ORIGIN_IP \
+  https://willthegavlegoatburn.com/ -o /dev/null -w '%{http_code}\n'   # expect 000
+```
+
 ---
 
 ## 3. Email — `contact@` plus a sender for verification/reset
