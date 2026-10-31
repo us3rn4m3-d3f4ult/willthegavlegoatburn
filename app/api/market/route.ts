@@ -12,6 +12,9 @@ const MAX_ORDERS = 200; // matches the /api/orders cap
 const FILLED_EVENT = parseAbiItem(
   "event OrderFilled(uint256 indexed id, address indexed taker, uint256 shares, uint256 usdcAmount)",
 );
+const PLACED_EVENT = parseAbiItem(
+  "event OrderPlaced(uint256 indexed id, address indexed maker, bool isYes, bool isAsk, uint256 shares, uint256 price, uint64 expiresAt)",
+);
 
 type Level = { price: number; shares: number; isYes: boolean; isAsk: boolean };
 
@@ -109,18 +112,34 @@ export async function GET() {
     }
 
     const found: [string, number, string, string, string, string][] = [];
+    const makers: string[] = [];
     for (let i = 0; i < ranges.length; i += CONCURRENCY) {
       const batch = ranges.slice(i, i + CONCURRENCY);
       const results = await Promise.all(
         batch.map(([f, t]) =>
           publicClient
-            .getLogs({ address: BOOK_ADDRESS, event: FILLED_EVENT, fromBlock: f, toBlock: t })
+            .getLogs({
+              address: BOOK_ADDRESS,
+              events: [FILLED_EVENT, PLACED_EVENT],
+              fromBlock: f,
+              toBlock: t,
+            })
             .catch(() => []),
         ),
       );
       for (const logs of results) {
         for (const log of logs) {
-          const args = log.args as { id?: bigint; taker?: string; shares?: bigint; usdcAmount?: bigint };
+          const args = log.args as {
+            id?: bigint;
+            taker?: string;
+            maker?: string;
+            shares?: bigint;
+            usdcAmount?: bigint;
+          };
+          if (args.maker) {
+            makers.push(args.maker.toLowerCase());
+            continue;
+          }
           if (args.taker === undefined || args.id === undefined) continue;
           found.push([
             String(log.blockNumber ?? 0n),
@@ -143,6 +162,14 @@ export async function GET() {
             r,
           )
           .catch(() => {});
+        await pool
+          .query(`insert into participants (address) values ($1) on conflict do nothing`, [r[3]])
+          .catch(() => {});
+      }
+      for (const m of makers) {
+        await pool
+          .query(`insert into participants (address) values ($1) on conflict do nothing`, [m])
+          .catch(() => {});
       }
       await pool
         .query(`update fills set last_block = $1, updated_at = now() where id = 1`, [
@@ -150,13 +177,14 @@ export async function GET() {
         ])
         .catch(() => {});
 
-      const totals = await pool
-        .query(
-          `select coalesce(sum(usdc), 0)::text as volume, count(distinct taker)::int as traders from trades`,
-        )
-        .catch(() => ({ rows: [] as { volume: string; traders: number }[] }));
-      volume = Number(totals.rows[0]?.volume ?? 0);
-      traders = Number(totals.rows[0]?.traders ?? 0);
+      const vol = await pool
+        .query(`select coalesce(sum(usdc), 0)::text as volume from trades`)
+        .catch(() => ({ rows: [] as { volume: string }[] }));
+      const people = await pool
+        .query(`select count(*)::int as n from participants`)
+        .catch(() => ({ rows: [] as { n: number }[] }));
+      volume = Number(vol.rows[0]?.volume ?? 0);
+      traders = Number(people.rows[0]?.n ?? 0);
     } else {
       volume = 0;
       traders = 0;

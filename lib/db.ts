@@ -99,6 +99,13 @@ create table if not exists trades (
 );
 
 create index if not exists trades_block_idx on trades (block desc);
+
+-- Anyone who has ever placed an order or filled one. Counts a maker as a trader,
+-- which the OrderFilled-only count missed entirely.
+create table if not exists participants (
+  address    text primary key,
+  first_seen timestamptz not null default now()
+);
 `;
 
 export function getPool(): Pool | null {
