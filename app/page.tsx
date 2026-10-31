@@ -31,7 +31,7 @@ export default function HomePage() {
           </section>
 
           <section id="resolves" className="panel scroll-mt-24 p-5">
-            <h2 className="eyebrow">Resolution</h2>
+            <h2 className="text-[15px] font-semibold text-fg">Resolution</h2>
             <div className="mt-3 space-y-2 text-[13px] leading-relaxed text-muted">
               <p>
                 <span className="font-medium text-yes">Yes</span> if the goat catches fire at
@@ -53,44 +53,46 @@ export default function HomePage() {
           <Comments />
 
           <section className="border-t border-line pt-7">
-            <h2 className="eyebrow">Goat history</h2>
-            <div className="mt-4 flex flex-wrap items-end gap-x-8 gap-y-3">
-              <p className="num text-[56px] font-semibold leading-none tracking-[-0.04em] text-fg">
-                {BURN_RATE}%
-              </p>
-              <p className="max-w-[30ch] pb-2 text-[13px] leading-relaxed text-muted">
-                of the {TOTAL} recorded years ended in fire — {BURNED} goats burned.
-              </p>
-            </div>
+            <h2 className="text-[15px] font-semibold text-fg">Goat history</h2>
+            <div className="mt-5 grid gap-8 lg:grid-cols-[190px_minmax(0,1fr)]">
+              <div>
+                <p className="num text-[56px] font-semibold leading-none tracking-[-0.04em] text-fg">
+                  {BURN_RATE}%
+                </p>
+                <p className="mt-3 text-[13px] leading-relaxed text-muted">
+                  {BURNED} of {TOTAL} years ended in fire.
+                </p>
+              </div>
 
-            <details className="group mt-6 border-t border-line pt-4">
-              <summary className="flex cursor-pointer list-none items-center justify-between text-[12.5px] text-muted transition-colors hover:text-fg [&::-webkit-details-marker]:hidden">
-                All {TOTAL} recorded years
-                <span
-                  aria-hidden="true"
-                  className="text-[13px] leading-none text-dim transition-transform duration-200 group-open:rotate-45"
-                >
-                  +
-                </span>
-              </summary>
-              <ul className="mt-2 divide-y divide-line">
-                {GOAT_HISTORY.map((g) => (
-                  <li key={g.year} className="flex items-baseline gap-6 py-2.5 text-[12.5px]">
-                    <span className="num w-10 shrink-0 text-fg">{g.year}</span>
-                    <span className="text-muted">{g.event}</span>
-                    <span
-                      className={`num ml-auto shrink-0 ${g.burned ? "text-yes" : "text-dim"}`}
+              <details open className="group">
+                <summary className="flex cursor-pointer list-none items-center justify-between border-b border-line pb-2 text-[12.5px] text-muted transition-colors hover:text-fg [&::-webkit-details-marker]:hidden">
+                  All {TOTAL} years
+                  <span
+                    aria-hidden="true"
+                    className="text-[13px] leading-none text-dim transition-transform duration-200 group-open:rotate-45"
+                  >
+                    +
+                  </span>
+                </summary>
+                <ul className="mt-1 grid grid-cols-2 gap-x-8 sm:grid-cols-3">
+                  {GOAT_HISTORY.map((g) => (
+                    <li
+                      key={g.year}
+                      className="flex items-baseline justify-between border-b border-line py-1.5 text-[12.5px]"
                     >
-                      {g.burned ? "burned" : "no fire"}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </details>
+                      <span className="num text-fg">{g.year}</span>
+                      <span className={g.burned ? "text-yes" : "text-dim"}>
+                        {g.burned ? "burned" : "no fire"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            </div>
           </section>
 
           <section className="border-t border-line pt-7">
-            <h2 className="eyebrow">Questions</h2>
+            <h2 className="text-[15px] font-semibold text-fg">Questions</h2>
             <div className="mt-2 divide-y divide-line">
               {FAQ.map((item) => (
                 <details key={item.q} className="group py-4">

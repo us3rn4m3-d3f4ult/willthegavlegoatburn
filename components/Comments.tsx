@@ -3,7 +3,15 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-type Comment = { id: string; body: string; at: string; name: string; yes: number; no: number };
+type Comment = {
+  id: string;
+  body: string;
+  at: string;
+  name: string;
+  yes: number;
+  no: number;
+  mine: boolean;
+};
 
 const ERRORS: Record<string, string> = {
   language: "That contains language we don't allow here.",
@@ -37,6 +45,7 @@ export function Comments() {
   const [text, setText] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const load = useCallback((p: number) => {
     setLoaded(false);
@@ -90,6 +99,27 @@ export function Comments() {
       setError("Network error.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function remove(id: string) {
+    if (deleting) return;
+    setDeleting(id);
+    setError("");
+    try {
+      const res = await fetch(`/api/comments?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      const data = (await res.json()) as { ok?: boolean; error?: string };
+      if (res.ok && data.ok) {
+        // Drop it in place; refetching the page would jump the list around.
+        setList((l) => l.filter((c) => c.id !== id));
+        setTotal((t) => Math.max(0, t - 1));
+        return;
+      }
+      setError(data.error === "sign_in_required" ? "Sign in to delete." : "Could not delete that.");
+    } catch {
+      setError("Network error.");
+    } finally {
+      setDeleting(null);
     }
   }
 
@@ -159,6 +189,16 @@ export function Comments() {
                   </span>
                   <span>·</span>
                   <span>{ago(c.at)}</span>
+                  {c.mine ? (
+                    <button
+                      type="button"
+                      onClick={() => remove(c.id)}
+                      disabled={deleting === c.id}
+                      className="ml-auto text-[11px] text-dim transition-colors hover:text-no disabled:opacity-40"
+                    >
+                      {deleting === c.id ? "Deleting…" : "Delete"}
+                    </button>
+                  ) : null}
                 </div>
                 <p className="mt-1 whitespace-pre-wrap break-words text-[12.5px] leading-relaxed text-fg">
                   {c.body}

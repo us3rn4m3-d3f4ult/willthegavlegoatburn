@@ -47,6 +47,10 @@ export async function GET(req: Request) {
   const pool = getPool();
   if (!pool) return json({ ok: true, comments: [], available: false });
 
+  // Knowing who is asking lets the list mark their own comments, so the UI can
+  // offer a delete control without trusting a client-side name comparison.
+  const viewer = await sessionUser(req);
+
   const url = new URL(req.url);
   const page = Math.max(1, Number.parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
   const perPage = Number.parseInt(url.searchParams.get("perPage") ?? "10", 10) || 10;
@@ -86,6 +90,7 @@ export async function GET(req: Request) {
       name: r.username ?? handle(r.user_id),
       yes: Number(r.yes_shares),
       no: Number(r.no_shares),
+      mine: Boolean(viewer && viewer.id === r.user_id),
     })),
   });
 }
@@ -138,8 +143,39 @@ export async function POST(req: Request) {
         name: user.username ?? handle(user.id),
         yes: 0,
         no: 0,
+        mine: true,
       },
     },
     201,
   );
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Authors may remove their own comments. */
+export async function DELETE(req: Request) {
+  if (crossOrigin(req)) return json({ ok: false, error: "bad_origin" }, 403);
+
+  const user = await sessionUser(req);
+  if (!user) return json({ ok: false, error: "sign_in_required" }, 401);
+
+  if (!attemptLimiter(user.id)) {
+    return json({ ok: false, error: "rate_limited" }, 429, { "Retry-After": "60" });
+  }
+
+  const id = new URL(req.url).searchParams.get("id") ?? "";
+  if (!UUID.test(id)) return json({ ok: false, error: "invalid_id" }, 400);
+
+  const pool = getPool();
+  if (!pool) return json({ ok: false, error: "accounts_unavailable" }, 503);
+
+  // The user_id predicate is the authorisation check: a row someone else owns
+  // deletes nothing, and the response is identical to a missing row so the
+  // endpoint cannot be used to probe which ids exist.
+  const { rowCount } = await pool
+    .query(`delete from comments where id = $1 and user_id = $2`, [id, user.id])
+    .catch(() => ({ rowCount: 0 }));
+
+  if (!rowCount) return json({ ok: false, error: "not_found" }, 404);
+  return json({ ok: true });
 }
