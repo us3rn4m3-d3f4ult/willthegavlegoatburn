@@ -82,6 +82,7 @@ export function TradePanel({
   const [tracked, setTracked] = useState<Tracked[]>([]);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
+  const [ok, setOk] = useState<string | null>(null);
   const [fill, setFill] = useState<{ value: number; label: string } | null>(null);
   const signedIn = useSession();
 
@@ -421,11 +422,18 @@ export function TradePanel({
       ...t,
     ]);
     setFill({ value: 0, label: "0% filled · resting" });
-    setStatus(
-      `${action === "buy" ? "Bid" : "Ask"} placed for ${value.toFixed(2)} shares at ${Number(priceCents).toFixed(1)}¢. It waits in the book until someone takes it.`,
-    );
+    const placed = `${action === "buy" ? "Bid" : "Ask"} placed: ${value.toFixed(2)} ${
+      isYes ? "Yes" : "No"
+    } at ${Number(priceCents).toFixed(1)}¢, resting in the book.`;
+    setStatus(placed);
+    setOk(placed);
+    // Refresh the book now, and again shortly after in case the node was still
+    // catching up when the first read went out.
     bump();
+    setTimeout(bump, 1500);
+    setTimeout(bump, 4000);
     void loadBalances();
+    setTimeout(() => setOk(null), 6000);
   }
 
   async function submit() {
@@ -462,6 +470,7 @@ export function TradePanel({
 
     setBusy(true);
     setStatus("");
+    setOk(null);
     setFill(null);
     try {
       if (mode === "market") await runMarket();
@@ -518,7 +527,9 @@ export function TradePanel({
 
   const label = !BOOK_CONFIGURED
     ? "Market not deployed"
-    : signedIn !== true
+    : ok
+      ? "Order placed ✓"
+      : signedIn !== true
       ? "Register to trade"
       : !account
         ? "Connect wallet to trade"
@@ -725,7 +736,7 @@ export function TradePanel({
       <button
         type="button"
         onClick={submit}
-        disabled={busy || !BOOK_CONFIGURED || (signedIn === true && Boolean(account) && noLiquidity)}
+        disabled={busy || ok !== null || !BOOK_CONFIGURED || (signedIn === true && Boolean(account) && noLiquidity)}
         className={`mt-4 h-11 w-full rounded-btn text-[13px] font-semibold transition-opacity disabled:cursor-not-allowed disabled:opacity-40 ${
           action === "buy" ? "bg-fg text-black hover:opacity-90" : "bg-surface2 text-fg hover:opacity-90"
         }`}
@@ -770,8 +781,13 @@ export function TradePanel({
       </details>
 
       {status || connectError ? (
-        <p aria-live="polite" className="mt-2 text-center text-[11.5px] leading-relaxed text-muted">
-          {status || connectError}
+        <p
+          aria-live="polite"
+          className={`mt-2 text-center text-[11.5px] leading-relaxed ${
+            ok ? "font-medium text-yes" : "text-muted"
+          }`}
+        >
+          {ok ?? status ?? connectError}
         </p>
       ) : null}
 

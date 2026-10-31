@@ -79,7 +79,7 @@ export function OrderBookLive() {
 
   useEffect(() => {
     load();
-    const t = setInterval(load, 15_000);
+    const t = setInterval(load, 5_000);
     return () => clearInterval(t);
   }, [load, version]);
 
