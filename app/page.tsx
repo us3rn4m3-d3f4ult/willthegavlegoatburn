@@ -122,8 +122,11 @@ export default function HomePage() {
               <span className="font-medium text-fg">No</span>, because nothing burned.
             </p>
             <p>
-              If no goat goes up at all, the market voids and every share is refunded at half
-              price, permissionlessly.
+              If no goat goes up at all, the market voids instead of resolving. Every share is
+              then refunded at{" "}
+              <span className="font-medium text-fg">0.50 USDC per share</span> - half the price of
+              a full pair - so a YES + NO pair returns exactly the 1 USDC it cost, and nobody is
+              left holding something worthless.
             </p>
           </div>
         </section>
