@@ -27,6 +27,7 @@ type WalletCtx = {
   disconnect: () => void;
   ensureChain: () => Promise<boolean>;
   walletClient: () => WalletClient | null;
+  connectError: string;
 };
 
 const Ctx = createContext<WalletCtx | null>(null);
@@ -45,6 +46,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [hasProvider, setHasProvider] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [wallets, setWallets] = useState<Announced[]>([]);
+  const [connectError, setConnectError] = useState("");
 
   // EIP-6963: every installed wallet announces itself with a name and icon, so we
   // can show a real picker instead of guessing what window.ethereum is.
@@ -101,20 +103,32 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const connect = useCallback(async (target?: Announced) => {
     if (target) activeProvider = target.provider;
-    const eth = provider();
-    if (!eth) return;
+    // Some wallets only announce via EIP-6963 and never set window.ethereum, so
+    // fall back to the announced provider before giving up.
+    const eth = (target?.provider ?? provider() ?? wallets[0]?.provider) as Eip1193 | null;
+    if (!eth) {
+      setConnectError("No wallet found in this browser. Install MetaMask or Coinbase Wallet.");
+      return;
+    }
+    setConnectError("");
     setConnecting(true);
     try {
       const accs = (await eth.request({ method: "eth_requestAccounts" })) as string[];
+      if (!accs || accs.length === 0) {
+        setConnectError("The wallet returned no account. Unlock it and try again.");
+        return;
+      }
       setAccount((accs[0] as Address) ?? null);
       const id = (await eth.request({ method: "eth_chainId" })) as string;
       setChainId(Number.parseInt(id, 16));
-    } catch {
-      // user rejected - nothing to do
+    } catch (err) {
+      const e = err as { code?: number; message?: string };
+      if (e.code === 4001) setConnectError("You rejected the request in the wallet.");
+      else setConnectError(e.message ? `Wallet error: ${e.message}` : "The wallet did not respond.");
     } finally {
       setConnecting(false);
     }
-  }, []);
+  }, [wallets]);
 
   const disconnect = useCallback(() => {
     setAccount(null);
@@ -175,8 +189,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       disconnect,
       ensureChain,
       walletClient,
+      connectError,
     }),
-    [account, chainId, hasProvider, connecting, wallets, connect, disconnect, ensureChain, walletClient],
+    [account, chainId, hasProvider, connecting, wallets, connect, disconnect, ensureChain, walletClient, connectError],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -289,6 +304,12 @@ export function ConnectWallet() {
                 Only wallets installed in this browser appear here. Mobile wallets need
                 WalletConnect, which is not configured yet.
               </p>
+
+              {connectError ? (
+                <p className="mt-2 rounded-[5px] border border-ember/40 bg-ember/10 px-2.5 py-2 text-[11px] leading-relaxed text-ember">
+                  {connectError}
+                </p>
+              ) : null}
             </div>
           </div>,
             document.body,

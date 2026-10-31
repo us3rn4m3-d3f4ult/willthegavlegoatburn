@@ -49,7 +49,7 @@ export function TradePanel({
   mid?: number;
   anchor?: boolean;
 }) {
-  const { account, connect, ensureChain, walletClient } = useWallet();
+  const { account, connect, ensureChain, walletClient, connectError } = useWallet();
   const router = useRouter();
   const { pick, bump, version, sideRequest } = useTradeState();
 
@@ -638,9 +638,9 @@ export function TradePanel({
         </p>
       ) : null}
 
-      {status ? (
+      {status || connectError ? (
         <p aria-live="polite" className="mt-2 text-center text-[11.5px] leading-relaxed text-muted">
-          {status}
+          {status || connectError}
         </p>
       ) : null}
 
