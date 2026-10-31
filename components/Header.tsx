@@ -13,7 +13,7 @@ export function Header({ seed = "guest" }: { seed?: string }) {
           <span className="text-[15px] font-semibold leading-none tracking-tight text-fg">
             willthegavlegoatburn
           </span>
-          <span className="inline-flex h-[22px] shrink-0 items-center rounded-[6px] bg-white px-2 text-[11px] font-bold leading-none tracking-tight text-black">
+          <span className="inline-flex h-[20px] shrink-0 items-center rounded-[4px] bg-white px-1.5 text-[10.5px] font-bold leading-none tracking-wide text-black">
             2026
           </span>
         </Link>

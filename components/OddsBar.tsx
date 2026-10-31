@@ -11,12 +11,12 @@ export function OddsBar({ value }: { value: number }) {
         <span className="mb-2 text-[13px] font-medium text-muted">chance it burns</span>
       </div>
 
-      <div className="mt-5 flex h-1.5 w-full overflow-hidden rounded-full bg-surface2">
+      <div className="mt-5 flex h-1 w-full overflow-hidden bg-surface2">
         <div
-          className="h-full rounded-l-full bg-gradient-to-r from-yes to-ember transition-[width] duration-300"
+          className="h-full bg-yes transition-[width] duration-300"
           style={{ width: `${pct * 100}%` }}
         />
-        <div className="h-full flex-1 bg-no/70" />
+        <div className="h-full flex-1 bg-no/60" />
       </div>
 
       <div className="mt-2.5 flex justify-between text-[12px]">

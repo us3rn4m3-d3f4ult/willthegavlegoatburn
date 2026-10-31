@@ -41,6 +41,18 @@ create table if not exists recovery_codes (
 );
 
 create index if not exists recovery_codes_user_id_idx on recovery_codes (user_id);
+
+-- Public comments. Cascade on user delete: the privacy statement promises that
+-- deleting an account removes its data, so comments must go with it.
+create table if not exists comments (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references users(id) on delete cascade,
+  body       text not null,
+  hidden     boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists comments_created_at_idx on comments (created_at desc);
 `;
 
 export function getPool(): Pool | null {

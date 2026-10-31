@@ -5,6 +5,7 @@ import { OddsBar } from "@/components/OddsBar";
 import { OrderBook } from "@/components/OrderBook";
 import { PriceChart } from "@/components/PriceChart";
 import { TradePanel } from "@/components/TradePanel";
+import { Comments } from "@/components/Comments";
 import { fmtCompact, fmtUsd } from "@/lib/format";
 import { FAQ, SITE, faqJsonLd } from "@/lib/seo";
 import type { Metadata } from "next";
@@ -29,10 +30,7 @@ function RecentTrades() {
     <section className="overflow-hidden rounded-card border border-line bg-surface">
       <header className="flex items-center justify-between border-b border-line px-4 py-3">
         <h2 className="text-[13px] font-semibold tracking-tight">Recent trades</h2>
-        <span className="flex items-center gap-1.5 text-[11px] text-dim">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-yes" />
-          live
-        </span>
+        <span className="text-[11px] text-dim">live</span>
       </header>
       <ul className="divide-y divide-line">
         {TRADES.map((t, i) => (
@@ -58,10 +56,10 @@ export default function HomePage() {
         {/* ── market header ───────────────────────────────── */}
         <section className="rounded-card border border-line bg-surface p-6">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-yes/30 bg-yes/10 px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-yes">
+            <span className="rounded-[4px] border border-yes/30 bg-yes/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-yes">
               Live
             </span>
-            <span className="rounded-full border border-line px-2.5 py-1 text-[10.5px] font-medium text-muted">
+            <span className="rounded-[4px] border border-line px-2 py-1 text-[10px] font-medium text-muted">
               Base · USDC
             </span>
           </div>
@@ -145,6 +143,8 @@ export default function HomePage() {
             ))}
           </dl>
         </section>
+
+        <Comments />
       </div>
 
       <script

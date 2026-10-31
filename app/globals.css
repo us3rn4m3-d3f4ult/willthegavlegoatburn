@@ -16,8 +16,9 @@
   --color-ember: #ffb020;
   --color-no: #4c8dff;
 
-  --radius-card: 14px;
-  --radius-btn: 10px;
+  --radius-card: 8px;
+  --radius-btn: 6px;
+  --radius-pill: 4px;
 
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI Variable Text",
     "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;

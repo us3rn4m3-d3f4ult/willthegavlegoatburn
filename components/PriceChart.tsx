@@ -18,7 +18,6 @@ export function PriceChart({ data = PRICE_HISTORY }: { data?: number[] }) {
   );
 
   const line = pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
-  const area = `${line} ${(W - PAD).toFixed(1)},${H} ${PAD},${H}`;
 
   return (
     <section className="overflow-hidden rounded-card border border-line bg-surface">
@@ -29,12 +28,6 @@ export function PriceChart({ data = PRICE_HISTORY }: { data?: number[] }) {
 
       <div className="px-2 pt-3 pb-2">
         <svg viewBox={`0 0 ${W} ${H}`} className="h-[170px] w-full" role="img" aria-label="Implied probability of YES over the last 30 days">
-          <defs>
-            <linearGradient id="area" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#ff5c2b" stopOpacity="0.28" />
-              <stop offset="100%" stopColor="#ff5c2b" stopOpacity="0" />
-            </linearGradient>
-          </defs>
           {[0.25, 0.5, 0.75].map((f) => (
             <line
               key={f}
@@ -46,12 +39,11 @@ export function PriceChart({ data = PRICE_HISTORY }: { data?: number[] }) {
               strokeWidth="1"
             />
           ))}
-          <polygon points={area} fill="url(#area)" />
           <polyline
             points={line}
             fill="none"
             stroke="#ff5c2b"
-            strokeWidth="2"
+            strokeWidth="1.5"
             strokeLinecap="round"
             strokeLinejoin="round"
           />

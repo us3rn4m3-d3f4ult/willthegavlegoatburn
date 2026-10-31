@@ -1,14 +1,18 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
- * Site gate.
+ * CSP notes, because this is easy to get wrong.
  *
- * Set SITE_MODE=maintenance on the server and every page except the allowlist
- * below renders the "opens 1 November" page with an email capture. Unset it
- * (or set anything else) and the market is public again — no code change, no
- * rebuild of the routes, one env var and a container restart.
+ * Next 15 only stamps a nonce onto *some* of its own script tags (we measured
+ * 3 of 32), so a nonce-based `script-src` blocks the hydration chunks and the
+ * page renders but never becomes interactive. `'strict-dynamic'` cannot be used
+ * either: its presence makes browsers ignore `'self'` entirely.
+ *
+ * So scripts are `'self' 'unsafe-inline'`. That still blocks third-party script
+ * origins, framing and object embedding — the classes of attack that matter for
+ * a wallet front-end — but it does **not** mitigate inline XSS. See
+ * docs/SECURITY_AUDIT.md, finding F-04, for the plan to tighten this.
  */
-
 const PUBLIC_PREFIXES = ["/maintenance", "/api", "/_next", "/opengraph-image"];
 const PUBLIC_EXACT = new Set([
   "/privacy",
@@ -27,26 +31,57 @@ const PUBLIC_EXACT = new Set([
   "/favicon.ico",
 ]);
 
+function contentSecurityPolicy(isDev: boolean): string {
+  const scriptExtra = isDev ? " 'unsafe-eval'" : "";
+  return [
+    "default-src 'self'",
+    `script-src 'self' 'unsafe-inline'${scriptExtra}`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob:",
+    "font-src 'self' data:",
+    // Chain RPC and wallet transport. Keep this list explicit: adding a wildcard
+    // here is how wallet-drainer scripts get to phone home.
+    [
+      "connect-src 'self'",
+      "https://sepolia.base.org",
+      "https://mainnet.base.org",
+      "https://*.walletconnect.com",
+      "wss://*.walletconnect.com",
+      "https://*.coinbase.com",
+    ].join(" "),
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "object-src 'none'",
+    "upgrade-insecure-requests",
+  ].join("; ");
+}
+
 export function middleware(req: NextRequest) {
-  if (process.env.SITE_MODE !== "maintenance") {
-    return NextResponse.next();
-  }
+  const policy = contentSecurityPolicy(process.env.NODE_ENV !== "production");
 
   const { pathname } = req.nextUrl;
-
+  const gated = process.env.SITE_MODE === "maintenance";
   const isPublic =
     PUBLIC_EXACT.has(pathname) ||
     PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
-  if (isPublic) return NextResponse.next();
+  let res: NextResponse;
 
-  const url = req.nextUrl.clone();
-  url.pathname = "/maintenance";
-  url.search = "";
+  if (gated && !isPublic) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/maintenance";
+    url.search = "";
+    res = NextResponse.rewrite(url);
+    res.headers.set("Cache-Control", "no-store, max-age=0");
+    res.headers.set("Retry-After", "3600");
+  } else {
+    res = NextResponse.next();
+  }
 
-  const res = NextResponse.rewrite(url);
-  res.headers.set("Cache-Control", "no-store, max-age=0");
-  res.headers.set("Retry-After", "3600");
+  res.headers.set("content-security-policy", policy);
+  res.headers.set("x-content-type-options", "nosniff");
+  res.headers.set("referrer-policy", "strict-origin-when-cross-origin");
   return res;
 }
 
