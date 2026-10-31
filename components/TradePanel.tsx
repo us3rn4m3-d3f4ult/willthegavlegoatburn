@@ -366,14 +366,42 @@ export function TradePanel({
     }
 
     setStatus(`Placing ${action === "buy" ? "bid" : "ask"} at ${Number(priceCents).toFixed(1)}¢…`);
-    // Simulate first so a rejected order reports why instead of costing a failed tx.
-    const sim = await publicClient.simulateContract({
-      address: BOOK_ADDRESS,
-      abi: BOOK_ABI,
-      functionName: action === "buy" ? "placeBid" : "placeAsk",
-      args: [isYes, units(value), centsToWei(Number(priceCents)), expiresAt],
-      account,
-    });
+    // The deposit is mined, but the node we simulate against may not have it yet,
+    // which surfaces as a false InsufficientUsdc. Wait for the credit to be
+    // visible, then simulate. Retries only that specific revert.
+    const wantCredit = units(usdcNeeded);
+    if (action === "buy" && account) {
+      for (let i = 0; i < 15; i++) {
+        const credit = (await publicClient.readContract({
+          address: BOOK_ADDRESS,
+          abi: BOOK_ABI,
+          functionName: "usdcBalance",
+          args: [account],
+        })) as bigint;
+        if (credit >= wantCredit) break;
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+    }
+
+    let sim;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        sim = await publicClient.simulateContract({
+          address: BOOK_ADDRESS,
+          abi: BOOK_ABI,
+          functionName: action === "buy" ? "placeBid" : "placeAsk",
+          args: [isYes, units(value), centsToWei(Number(priceCents)), expiresAt],
+          account,
+        });
+        break;
+      } catch (err) {
+        const msg = (err as { message?: string }).message ?? "";
+        if (attempt === 4 || !/febd90e7|InsufficientUsdc/i.test(msg)) throw err;
+        setStatus("Waiting for the deposit to register…");
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+    }
+    if (!sim) throw new Error("InsufficientUsdc");
     const h = await w.writeContract(sim.request);
     await wait(h);
 
