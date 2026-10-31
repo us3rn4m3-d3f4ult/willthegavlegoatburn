@@ -6,6 +6,7 @@ import { OrderBook } from "@/components/OrderBook";
 import { PriceChart } from "@/components/PriceChart";
 import { TradePanel } from "@/components/TradePanel";
 import { Comments } from "@/components/Comments";
+import { LiveMarket } from "@/components/LiveMarket";
 import { fmtCompact, fmtUsd } from "@/lib/format";
 import { FAQ, SITE, faqJsonLd } from "@/lib/seo";
 import type { Metadata } from "next";
@@ -70,19 +71,8 @@ export default function HomePage() {
             {MARKET.question}
           </h1>
 
-          <div className="mt-6">
-            <OddsBar value={MARKET.mid} />
-          </div>
-
-          <dl className="mt-6 grid grid-cols-2 gap-5 border-t border-line pt-5 sm:grid-cols-4">
-            <Stat label="Volume" value={fmtUsd(MARKET.volume)} />
-            <Stat label="Liquidity" value={fmtUsd(MARKET.liquidity)} />
-            <Stat label="Traders" value={MARKET.traders} />
-            <Stat label="Closes in" value={<Countdown to={MARKET.closesAt} />} />
-          </dl>
+          <LiveMarket />
         </section>
-
-        <PriceChart />
 
         <section className="rounded-card border border-line bg-surface p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">

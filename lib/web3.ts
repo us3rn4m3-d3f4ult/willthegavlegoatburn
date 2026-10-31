@@ -65,6 +65,40 @@ export const AMM_ABI = [
   { type: "function", name: "yesPrice", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   {
     type: "function",
+    name: "yesReserve",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "noReserve",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "event",
+    name: "Bought",
+    inputs: [
+      { name: "by", type: "address", indexed: true },
+      { name: "yes", type: "bool", indexed: false },
+      { name: "usdcIn", type: "uint256", indexed: false },
+      { name: "sharesOut", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "Sold",
+    inputs: [
+      { name: "by", type: "address", indexed: true },
+      { name: "yes", type: "bool", indexed: false },
+      { name: "sharesIn", type: "uint256", indexed: false },
+      { name: "usdcOut", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    type: "function",
     name: "yesBalance",
     stateMutability: "view",
     inputs: [{ name: "", type: "address" }],

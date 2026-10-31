@@ -67,6 +67,16 @@ create table if not exists comments (
 );
 
 create index if not exists comments_created_at_idx on comments (created_at desc);
+
+-- Real price history. Written by /api/market at most once a minute; the chart
+-- reads straight from this, so it is measured rather than invented.
+create table if not exists price_points (
+  id    bigserial primary key,
+  price numeric not null,
+  at    timestamptz not null default now()
+);
+
+create index if not exists price_points_at_idx on price_points (at desc);
 `;
 
 export function getPool(): Pool | null {
