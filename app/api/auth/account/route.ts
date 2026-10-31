@@ -8,6 +8,7 @@ import {
 } from "@/lib/auth";
 import { getPool } from "@/lib/db";
 import { clientIp, createLimiter, json, readJson } from "@/lib/httpx";
+import { issueCodes } from "@/lib/recovery";
 import { createSession, destroyAllSessions, sessionUser } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -66,6 +67,16 @@ export async function POST(req: Request) {
     if (!token) return json({ ok: false, error: "session_failed" }, 500);
 
     return json({ ok: true }, 200, { "Set-Cookie": sessionCookie(token) });
+  }
+
+  // ── regenerate recovery codes ────────────────────────────────────────────
+  if (action === "recovery") {
+    try {
+      const codes = await issueCodes(user.id);
+      return json({ ok: true, recoveryCodes: codes });
+    } catch {
+      return json({ ok: false, error: "recovery_unavailable" }, 500);
+    }
   }
 
   // ── delete account ───────────────────────────────────────────────────────

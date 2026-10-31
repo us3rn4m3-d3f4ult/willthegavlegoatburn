@@ -21,6 +21,7 @@ const PUBLIC_EXACT = new Set([
   "/login",
   "/register",
   "/account",
+  "/recover",
   "/robots.txt",
   "/sitemap.xml",
   "/favicon.ico",

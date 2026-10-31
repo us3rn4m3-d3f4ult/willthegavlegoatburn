@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { RecoveryCodes } from "@/components/RecoveryCodes";
 
 const MESSAGES: Record<string, string> = {
   invalid_email: "That doesn't look like a valid email address.",
@@ -24,6 +25,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [codes, setCodes] = useState<string[]>([]);
 
   const isRegister = mode === "register";
 
@@ -39,9 +41,17 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-      const data = (await res.json()) as { ok?: boolean; error?: string };
+      const data = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        recoveryCodes?: string[];
+      };
 
       if (res.ok && data.ok) {
+        if (Array.isArray(data.recoveryCodes) && data.recoveryCodes.length > 0) {
+          setCodes(data.recoveryCodes);
+          return;
+        }
         router.push("/account");
         router.refresh();
         return;
@@ -52,6 +62,18 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
     } finally {
       setBusy(false);
     }
+  }
+
+  if (codes.length > 0) {
+    return (
+      <RecoveryCodes
+        codes={codes}
+        onDone={() => {
+          router.push("/account");
+          router.refresh();
+        }}
+      />
+    );
   }
 
   return (

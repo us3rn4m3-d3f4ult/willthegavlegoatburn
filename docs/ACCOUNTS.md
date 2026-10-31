@@ -59,16 +59,41 @@ All mutating routes also check the `Origin` header against `Host`.
 `delete from users` — no soft delete, no tombstone, no email retained. This is what
 the privacy statement promises, so it has to stay true.
 
-## Not implemented yet (deliberately)
+## Recovery codes (the only way back in)
 
-- **Email verification.** Needs a mail provider. Until then an address is unverified
-  but still usable.
-- **Password reset by email.** Same blocker. A reset flow without verified delivery
-  is a takeover vector, so it is better absent than half-built. The login page says
-  so explicitly and points at "delete account and re-register".
+There is no password-reset email — this server cannot send mail (see
+`docs/EMAIL.md`). Recovery happens with **10 one-time codes**, issued at
+registration and shown exactly once.
 
-Both are ~30 lines once `MAIL_API_KEY` exists: a `tokens` table, a route that always
-answers `ok:true` (no account enumeration), and a single templated email.
+- 16 characters from a 32-symbol alphabet (`ABCDEFGHJKLMNPQRSTUVWXYZ23456789`, no
+  I/O/0/1) = **80 bits**, formatted `XXXX-XXXX-XXXX-XXXX`.
+- Stored as `HMAC-SHA256(SESSION_SECRET, normalised_code)`. The pepper lives in the
+  environment, not the database, so a database dump alone cannot be used to reset an
+  account.
+- Single use: `used_at` is set on consumption, and a used code is indistinguishable
+  from a wrong one.
+- 5 attempts/minute per IP — this endpoint is password-equivalent.
+- A successful recovery **destroys every session**, because whoever held one may be
+  the person who took the account.
+- "Generate new codes" on `/account` (requires the current password) replaces the
+  whole set and invalidates the old one.
+
+⚠️ **`SESSION_SECRET` must never be rotated casually.** It peppers the code hashes;
+changing it silently invalidates every code ever issued. `scripts/setup_db.py` only
+ever writes it if the value is empty.
+
+## Still missing
+
+- **Email verification.** Needs a mail provider. Addresses are unverified but usable.
+  This is a deliberate trade, not an oversight.
+
+## A gotcha that has bitten twice
+
+`.env.example` ships keys with **empty values** (`DATABASE_URL=`,
+`SESSION_SECRET=`, …). Any "add if missing" provisioning logic will see the key,
+assume it is configured, and skip it — which is exactly how `DATABASE_URL` ended up
+pointing at `localhost` and `SESSION_SECRET` ended up as a single `\r`. Provisioning
+must **upsert**, and `.gitattributes` now forces LF so the `\r` cannot come back.
 
 ## Inspecting
 

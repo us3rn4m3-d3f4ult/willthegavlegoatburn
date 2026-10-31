@@ -70,7 +70,8 @@ Routing (free forwarding to a personal inbox). Only *outbound* was ever the prob
 
 - Do **not** run an MTA here. It cannot deliver, and pretending otherwise ships a
   broken password reset.
-- Ship **recovery codes** so account recovery does not depend on email at all.
+- ✅ **Shipped:** recovery codes, so account recovery does not depend on email at all.
+  See `docs/ACCOUNTS.md`.
 - If email is ever genuinely needed, use **Resend's free tier over HTTPS** — the only
   transport this network permits — and record that as an accepted dependency.
 

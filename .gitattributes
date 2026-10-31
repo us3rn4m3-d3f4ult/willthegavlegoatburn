@@ -1,0 +1,19 @@
+# Force LF everywhere. This repo is edited on Windows and deployed to Linux:
+# CRLF in a .sh makes bash fail on "#!" and `set -e`, and a trailing \r inside an
+# env value silently corrupts it (it has already bitten us once with
+# SESSION_SECRET and DATABASE_URL).
+* text=auto eol=lf
+
+*.sh   text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+Dockerfile text eol=lf
+.env.example text eol=lf
+.env.deploy  text eol=lf
+
+*.png  binary
+*.jpg  binary
+*.ico  binary
+*.pem  text eol=lf
+*.key  text eol=lf

@@ -4,8 +4,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AbstractAvatar } from "@/components/AbstractAvatar";
+import { RecoveryCodes } from "@/components/RecoveryCodes";
 
-type Me = { user: { id: string; email: string; createdAt: string } | null; sessions: number };
+type Me = {
+  user: { id: string; email: string; createdAt: string } | null;
+  sessions: number;
+  recoveryRemaining?: number;
+};
 
 const MESSAGES: Record<string, string> = {
   wrong_password: "That password is incorrect.",
@@ -31,6 +36,7 @@ export function AccountView() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmText, setConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [codes, setCodes] = useState<string[]>([]);
 
   useEffect(() => {
     let alive = true;
@@ -92,6 +98,34 @@ export function AccountView() {
     }
   }
 
+  async function onRegenerate() {
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const res = await fetch("/api/auth/account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "recovery", currentPassword }),
+      });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        recoveryCodes?: string[];
+      };
+      if (res.ok && data.ok && Array.isArray(data.recoveryCodes)) {
+        setCodes(data.recoveryCodes);
+        setCurrentPassword("");
+        return;
+      }
+      setError(MESSAGES[data.error ?? ""] ?? "Could not generate codes.");
+    } catch {
+      setError("Network error.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function onSignOut() {
     await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
     setMe({ user: null, sessions: 0 });
@@ -125,6 +159,23 @@ export function AccountView() {
         </div>
         {error ? <p className="mt-3 text-[12px] text-yes">{error}</p> : null}
       </div>
+    );
+  }
+
+  if (codes.length > 0) {
+    return (
+      <RecoveryCodes
+        codes={codes}
+        doneLabel="I've saved them"
+        onDone={() => {
+          setCodes([]);
+          setNotice("New recovery codes generated. The old ones no longer work.");
+          fetch("/api/auth/me", { cache: "no-store" })
+            .then((r) => r.json() as Promise<Me>)
+            .then(setMe)
+            .catch(() => {});
+        }}
+      />
     );
   }
 
@@ -186,6 +237,32 @@ export function AccountView() {
 
       {error ? <p className="text-[12px] text-yes">{error}</p> : null}
       {notice ? <p className="text-[12px] text-no">{notice}</p> : null}
+
+      <section className="rounded-card border border-line bg-surface p-5">
+        <h2 className="text-[13px] font-semibold text-fg">Recovery codes</h2>
+        <p className="mt-1.5 text-[12px] leading-relaxed text-muted">
+          <span className="num font-medium text-fg">{me.recoveryRemaining ?? 0}</span> of 10
+          unused. These are the only way back in if you forget your password — there is no
+          password-reset email. Generating a new set invalidates every old code.
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <input
+            type="password"
+            autoComplete="current-password"
+            placeholder="Current password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            className="h-9 w-52 rounded-btn border border-line bg-black px-3 text-[12.5px] text-fg outline-none focus:border-line2"
+          />
+          <button
+            onClick={onRegenerate}
+            disabled={busy || currentPassword.length === 0}
+            className="h-9 rounded-btn border border-line px-4 text-[12.5px] text-muted transition-colors hover:border-line2 hover:text-fg disabled:opacity-40"
+          >
+            Generate new codes
+          </button>
+        </div>
+      </section>
 
       <section className="rounded-card border border-yes/25 bg-yes/[0.03] p-5">
         <h2 className="text-[13px] font-semibold text-fg">Delete account</h2>

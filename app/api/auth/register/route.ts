@@ -8,6 +8,7 @@ import {
 } from "@/lib/auth";
 import { dbReady, getPool } from "@/lib/db";
 import { clientIp, createLimiter, json, readJson } from "@/lib/httpx";
+import { issueCodes } from "@/lib/recovery";
 import { createSession } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -55,7 +56,11 @@ export async function POST(req: Request) {
   const token = await createSession(userId, req);
   if (!token) return json({ ok: false, error: "session_failed" }, 500);
 
-  return json({ ok: true, user: { id: userId, email } }, 200, {
+  // Recovery codes are the only account-recovery path — there is no reset email.
+  // Failure here must not block signup, so the account is still usable.
+  const recoveryCodes = await issueCodes(userId).catch(() => [] as string[]);
+
+  return json({ ok: true, user: { id: userId, email }, recoveryCodes }, 200, {
     "Set-Cookie": sessionCookie(token),
   });
 }

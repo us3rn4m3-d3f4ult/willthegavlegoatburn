@@ -29,6 +29,18 @@ create table if not exists sessions (
 );
 
 create index if not exists sessions_user_id_idx on sessions (user_id);
+
+-- One-time recovery codes. Password-equivalent, so they are stored as an
+-- HMAC over a server-side pepper: a database dump alone is not enough to use them.
+create table if not exists recovery_codes (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references users(id) on delete cascade,
+  code_hash  text not null,
+  used_at    timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists recovery_codes_user_id_idx on recovery_codes (user_id);
 `;
 
 export function getPool(): Pool | null {

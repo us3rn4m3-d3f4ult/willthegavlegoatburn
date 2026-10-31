@@ -54,17 +54,32 @@ def main() -> int:
     print(f".env.deploy     POSTGRES_PASSWORD {upsert(LOCAL_ENV, 'POSTGRES_PASSWORD', password)}")
     print(f".env.deploy     DATABASE_URL      {upsert(LOCAL_ENV, 'DATABASE_URL', database_url)}")
 
+    # Peppers the recovery-code hashes. MUST stay stable: rotating it silently
+    # invalidates every issued recovery code, so it is only ever created once.
+    secret = cfg.get("SESSION_SECRET") or secrets.token_hex(32)
+    print(f".env.deploy     SESSION_SECRET    {upsert(LOCAL_ENV, 'SESSION_SECRET', secret)}")
+
     client = connect(cfg)
     try:
         script = (
             "cd /home/deploy/gavle && "
+            # Normalise CRLF first: a trailing \r inside a value silently corrupts
+            # it, and it already broke SESSION_SECRET once.
+            "sed -i 's/\\r$//' .env.local; "
             f"grep -v '^POSTGRES_PASSWORD=' .env.local > .env.local.new; "
             f"printf '%s\\n' 'POSTGRES_PASSWORD={password}' >> .env.local.new; "
             f"grep -v '^DATABASE_URL=' .env.local.new > .env.local.new2; "
             f"printf '%s\\n' 'DATABASE_URL={database_url}' >> .env.local.new2; "
             "mv .env.local.new2 .env.local && rm -f .env.local.new && "
+            # Replace an EMPTY placeholder (copied from .env.example) but never
+            # overwrite a real secret — rotating it would invalidate every
+            # recovery code already issued.
+            f"sed -i 's|^SESSION_SECRET=$|SESSION_SECRET={secret}|' .env.local; "
+            f"grep -q '^SESSION_SECRET=..*' .env.local || printf '%s\\n' 'SESSION_SECRET={secret}' >> .env.local; "
             "chown deploy:deploy .env.local && "
-            "grep -c '^DATABASE_URL=.*@postgres:5432' .env.local"
+            "echo -n 'CRLF lines left: ' && grep -c $'\\r' .env.local || true; "
+            "echo -n 'DATABASE_URL ok: ' && grep -c '^DATABASE_URL=.*@postgres:5432' .env.local && "
+            "echo -n 'SESSION_SECRET chars: ' && sed -n 's/^SESSION_SECRET=//p' .env.local | head -1 | wc -c"
         )
         rc = run(client, script)
     finally:
