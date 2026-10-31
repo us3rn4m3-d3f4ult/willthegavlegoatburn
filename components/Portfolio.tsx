@@ -88,8 +88,8 @@ export function Portfolio() {
 
   if (!account) {
     return (
-      <section className="rounded-card border border-line bg-surface p-4">
-        <h2 className="text-[13px] font-semibold tracking-tight">Your money</h2>
+      <section className="panel p-4">
+        <h2 className="panel-title">Your money</h2>
         <p className="mt-2 text-[12.5px] leading-relaxed text-muted">
           Create an account, then connect a wallet, to see your balance and positions.
         </p>
@@ -102,7 +102,7 @@ export function Portfolio() {
     (snap?.yes ?? 0) * p + (snap?.no ?? 0) * (1 - p) + (snap?.inMarket ?? 0) + (snap?.wallet ?? 0);
 
   const tile = (label: string, value: string, note?: string) => (
-    <div key={label} className="rounded-[6px] border border-line bg-black px-3 py-2.5">
+    <div key={label} className="border border-line px-3 py-2.5">
       <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-dim">{label}</p>
       <p className="num mt-1 text-[15px] font-medium text-fg">{value}</p>
       {note ? <p className="num mt-0.5 text-[10.5px] text-dim">{note}</p> : null}
@@ -110,9 +110,9 @@ export function Portfolio() {
   );
 
   return (
-    <section className="rounded-card border border-line bg-surface">
-      <header className="flex items-center justify-between border-b border-line px-4 py-3">
-        <h2 className="text-[13px] font-semibold tracking-tight">Your money</h2>
+    <section className="panel">
+      <header className="panel-head">
+        <h2 className="panel-title">Your money</h2>
         <span className="text-[11px] text-dim">
           {failed ? "reads failed" : snap ? "live from the contract" : "loading"}
         </span>

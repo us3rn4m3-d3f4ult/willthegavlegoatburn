@@ -281,7 +281,7 @@ export function ConnectWallet() {
             onClick={() => setOpen(false)}
           >
             <div
-              className="w-full max-w-[360px] rounded-card border border-line bg-surface p-4"
+              className="w-full max-w-[360px] panel p-4"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between">
@@ -309,7 +309,7 @@ export function ConnectWallet() {
                         className="flex w-full items-center gap-3 rounded-btn border border-line bg-black px-3 py-2.5 text-left transition-colors hover:border-line2 disabled:opacity-60"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={w.icon} alt="" width={22} height={22} className="rounded-[5px]" />
+                        <img src={w.icon} alt="" width={22} height={22} className="rounded-[2px]" />
                         <span className="text-[12.5px] font-medium text-fg">{w.name}</span>
                       </button>
                     </li>
@@ -334,7 +334,7 @@ export function ConnectWallet() {
               ) : null}
 
               {connectError ? (
-                <p className="mt-2 rounded-[5px] border border-ember/40 bg-ember/10 px-2.5 py-2 text-[11px] leading-relaxed text-ember">
+                <p className="mt-2 border border-ember/40 bg-ember/10 px-2.5 py-2 text-[11px] leading-relaxed text-ember">
                   {connectError}
                 </p>
               ) : null}

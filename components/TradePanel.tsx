@@ -32,9 +32,9 @@ function FillBar({ value, label }: { value: number; label: string }) {
         <span className="text-dim">Fill</span>
         <span className="num text-muted">{label}</span>
       </div>
-      <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-surface2">
+      <div className="mt-1.5 h-[2px] w-full bg-line">
         <div
-          className="h-full rounded-full bg-ember transition-[width] duration-300"
+          className="h-full bg-ember transition-[width] duration-300"
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -546,42 +546,38 @@ export function TradePanel({
               : `${action === "buy" ? "Place bid" : "Place ask"} · ${Number(priceCents).toFixed(1)}¢`;
 
   return (
-    <section
-      id={anchor ? "trade-panel" : undefined}
-      className="scroll-mt-24 rounded-card border border-line bg-surface p-4"
-    >
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-[13px] font-semibold tracking-tight">Trade</h2>
-        <span className="text-[11px] text-dim">
-          {mode === "market" ? "fills against the book" : "rests in the book"}
-        </span>
-      </div>
+    <section id={anchor ? "trade-panel" : undefined} className="panel overflow-hidden">
+      <header className="panel-head">
+        <h2 className="panel-title">Trade</h2>
+      </header>
 
-      <fieldset className="mt-3">
+      <div className="p-4">
+      <fieldset>
         <legend className="sr-only">Which side</legend>
         <div className="grid grid-cols-2 gap-2">
           {([true, false] as const).map((yesSide) => {
             const best = yesSide ? bestAsk : bestBid;
+            const on = isYes === yesSide;
             return (
               <button
                 key={String(yesSide)}
                 type="button"
-                aria-pressed={isYes === yesSide}
+                aria-pressed={on}
                 onClick={() => {
                   setIsYes(yesSide);
                   setStatus("");
                 }}
-                className={`flex h-10 flex-col items-center justify-center rounded-btn text-[12.5px] font-semibold transition-colors ${
-                  isYes === yesSide
+                className={`flex h-12 flex-col items-center justify-center gap-0.5 rounded-btn border text-[13px] font-semibold transition-colors ${
+                  on
                     ? yesSide
-                      ? "bg-yes text-black"
-                      : "bg-no text-black"
-                    : "bg-surface2 text-muted hover:text-fg"
+                      ? "border-yes/60 bg-yes/10 text-yes"
+                      : "border-no/60 bg-no/10 text-no"
+                    : "border-line text-muted hover:border-line2 hover:text-fg"
                 }`}
               >
                 <span>{yesSide ? "Yes" : "No"}</span>
-                <span className="num text-[10.5px] font-medium opacity-80">
-                  {best !== undefined ? `${(best * 100).toFixed(1)}¢` : "no offers"}
+                <span className="num text-[10.5px] font-medium opacity-70">
+                  {best !== undefined ? `${(best * 100).toFixed(1)}¢` : "—"}
                 </span>
               </button>
             );
@@ -589,7 +585,7 @@ export function TradePanel({
         </div>
       </fieldset>
 
-      <div className="mt-3 flex rounded-btn border border-line p-0.5" role="tablist">
+      <div className="mt-4 flex rounded-btn border border-line p-0.5" role="tablist">
         {(["market", "limit"] as const).map((m) => (
           <button
             key={m}
@@ -600,7 +596,7 @@ export function TradePanel({
               setMode(m);
               setStatus("");
             }}
-            className={`h-8 flex-1 rounded-[5px] text-[12px] font-medium capitalize transition-colors ${
+            className={`h-8 flex-1 text-[12px] font-medium capitalize transition-colors ${
               mode === m ? "bg-surface2 text-fg" : "text-dim hover:text-muted"
             }`}
           >
@@ -619,7 +615,7 @@ export function TradePanel({
               setAction(a);
               setStatus("");
             }}
-            className={`h-8 rounded-[5px] border text-[12px] font-medium capitalize transition-colors ${
+            className={`h-8 border text-[12px] font-medium capitalize transition-colors ${
               action === a
                 ? "border-line2 bg-surface2 text-fg"
                 : "border-line text-dim hover:text-muted"
@@ -632,47 +628,47 @@ export function TradePanel({
 
       {mode === "limit" ? (
         <>
-          <label htmlFor="price" className="mt-3 block text-[11px] font-medium text-dim">
+          <label htmlFor="price" className="eyebrow mt-4 block">
             Price
           </label>
-          <div className="mt-1.5 flex w-full items-center gap-2 rounded-btn border border-line bg-black px-3 focus-within:border-line2">
+          <div className="mt-1.5 flex items-center gap-2 border border-line px-3 focus-within:border-line2">
             <input
               id="price"
               inputMode="decimal"
               value={priceCents}
               onChange={(e) => setPriceCents(e.target.value.replace(/[^0-9.]/g, ""))}
-              className="num h-11 w-full min-w-0 flex-1 bg-transparent text-[15px] text-fg outline-none placeholder:text-dim"
+              className="num h-11 w-full min-w-0 flex-1 bg-transparent text-[16px] text-fg outline-none placeholder:text-dim"
               placeholder="50.0"
             />
-            <span className="text-[13px] font-medium text-dim">¢</span>
+            <span className="text-[12px] text-dim">¢</span>
           </div>
-          <div className="mt-1.5 flex gap-1.5">
-            {bestAsk !== undefined ? (
+          {bestAsk !== undefined ? (
+            <div className="mt-1.5 flex gap-1.5">
               <button
                 type="button"
                 onClick={() => setPriceCents((bestAsk * 100).toFixed(1))}
-                className="h-7 flex-1 rounded-[5px] border border-line text-[11px] text-muted transition-colors hover:border-line2 hover:text-fg"
+                className="h-7 flex-1 border border-line text-[11.5px] text-muted transition-colors hover:border-line2 hover:text-fg"
               >
-                ask {(bestAsk * 100).toFixed(1)}
+                best ask {(bestAsk * 100).toFixed(1)}¢
               </button>
-            ) : null}
-          </div>
+            </div>
+          ) : null}
         </>
       ) : null}
 
-      <label htmlFor="amount" className="mt-3 block text-[11px] font-medium text-dim">
+      <label htmlFor="amount" className="eyebrow mt-4 block">
         Amount
       </label>
-      <div className="mt-1.5 flex w-full items-center gap-2 rounded-btn border border-line bg-black px-3 focus-within:border-line2">
+      <div className="mt-1.5 flex items-center gap-2 border border-line px-3 focus-within:border-line2">
         <input
           id="amount"
           inputMode="decimal"
           value={amount}
           onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
-          className="num h-11 w-full min-w-0 flex-1 bg-transparent text-[15px] text-fg outline-none placeholder:text-dim"
+          className="num h-11 w-full min-w-0 flex-1 bg-transparent text-[16px] text-fg outline-none placeholder:text-dim"
           placeholder="0.00"
         />
-        <span className="text-[13px] font-medium text-dim">{unitLabel}</span>
+        <span className="text-[12px] text-dim">{unitLabel}</span>
       </div>
 
       <dl className="mt-3 space-y-1.5 border-t border-line pt-3 text-[12.5px]">
@@ -741,53 +737,43 @@ export function TradePanel({
         type="button"
         onClick={submit}
         disabled={busy || ok !== null || !BOOK_CONFIGURED || (signedIn === true && Boolean(account) && noLiquidity)}
-        className={`mt-4 h-11 w-full rounded-btn text-[13px] font-semibold transition-opacity disabled:cursor-not-allowed disabled:opacity-40 ${
-          action === "buy" ? "bg-fg text-black hover:opacity-90" : "bg-surface2 text-fg hover:opacity-90"
+        className={`mt-5 h-11 w-full rounded-btn text-[13px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+          action === "buy"
+            ? "bg-fg text-black hover:bg-[#d8d8d8]"
+            : "border border-line2 text-fg hover:bg-surface2"
         }`}
       >
         {busy ? "Working…" : label}
       </button>
 
       {noLiquidity ? (
-        <p className="mt-2 text-[11.5px] leading-relaxed text-amber-400/90">
-          No {action === "buy" ? "offers" : "bids"} on {isYes ? "Yes" : "No"} to fill against.
-          Switch to <button type="button" onClick={() => setMode("limit")} className="underline">Limit</button>{" "}
-          and post your own — market orders need someone on the other side.
+        <p className="mt-2.5 text-[11.5px] leading-relaxed text-ember/90">
+          No {action === "buy" ? "offers" : "bids"} on {isYes ? "Yes" : "No"} to fill against. Use
+          Limit to post your own.
         </p>
       ) : null}
 
-      <details className="mt-3 rounded-[6px] border border-line bg-black px-3 py-2">
-        <summary className="flex cursor-pointer list-none items-center gap-2 text-[11px] text-muted [&::-webkit-details-marker]:hidden">
-          <span
-            aria-hidden="true"
-            className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-line2 text-[9px] font-semibold leading-none text-muted"
-          >
-            i
+      <details className="mt-4 border-t border-line pt-3">
+        <summary className="flex cursor-pointer list-none items-center justify-between text-[11.5px] text-dim [&::-webkit-details-marker]:hidden">
+          Which chain and token
+          <span aria-hidden="true" className="text-[13px] leading-none">
+            +
           </span>
-          Which coin and network to use
         </summary>
-        <div className="mt-2 space-y-1.5 text-[11px] leading-relaxed text-dim">
+        <div className="mt-2 space-y-1 text-[11.5px] leading-relaxed text-dim">
           <p>
-            Only <span className="font-medium text-fg">USDC on Base</span> (chain id 8453,
-            contract <span className="num">0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913</span>)
-            works here.
+            USDC on Base only ·{" "}
+            <span className="num text-muted">0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913</span>
           </p>
-          <p>
-            USDC on Ethereum, Polygon, Arbitrum or anywhere else will not appear in your
-            balance, and nobody can recover it for you. Same for ETH or other tokens sent to
-            this contract.
-          </p>
-          <p>
-            Keep a little <span className="font-medium text-fg">ETH on Base</span> in the
-            wallet for gas. Transactions cost a fraction of a cent, but they are not free.
-          </p>
+          <p>Anything sent on another chain, or in another token, is unrecoverable.</p>
+          <p>Keep a little ETH on Base for gas.</p>
         </div>
       </details>
 
       {status || connectError ? (
         <p
           aria-live="polite"
-          className={`mt-2 text-center text-[11.5px] leading-relaxed ${
+          className={`mt-3 text-center text-[12px] leading-relaxed ${
             ok ? "font-medium text-yes" : "text-muted"
           }`}
         >
@@ -796,17 +782,16 @@ export function TradePanel({
       ) : null}
 
       {account && bal.usdc > 0 ? (
-        <p className="mt-2 text-center text-[11px] text-dim">
-          <button
-            type="button"
-            onClick={withdrawAll}
-            disabled={busy}
-            className="underline decoration-line2 underline-offset-2 hover:text-fg disabled:opacity-40"
-          >
-            Withdraw {bal.usdc.toFixed(2)} USDC
-          </button>
-        </p>
+        <button
+          type="button"
+          onClick={withdrawAll}
+          disabled={busy}
+          className="mt-3 w-full text-center text-[11.5px] text-dim transition-colors hover:text-fg disabled:opacity-40"
+        >
+          Withdraw {bal.usdc.toFixed(2)} USDC
+        </button>
       ) : null}
+      </div>
     </section>
   );
 }

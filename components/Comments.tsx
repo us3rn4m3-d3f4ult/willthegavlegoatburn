@@ -94,9 +94,9 @@ export function Comments() {
   }
 
   return (
-    <section className="rounded-card border border-line bg-surface">
-      <header className="flex items-center justify-between border-b border-line px-4 py-3">
-        <h2 className="text-[13px] font-semibold tracking-tight">Discussion</h2>
+    <section className="panel">
+      <header className="panel-head">
+        <h2 className="panel-title">Discussion</h2>
         <span className="num text-[11px] text-dim">{total}</span>
       </header>
 
@@ -176,7 +176,7 @@ export function Comments() {
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
-              className="h-7 rounded-[5px] border border-line px-2.5 text-muted transition-colors hover:border-line2 hover:text-fg disabled:opacity-40"
+              className="h-7 border border-line px-2.5 text-muted transition-colors hover:border-line2 hover:text-fg disabled:opacity-40"
             >
               Previous
             </button>
@@ -186,7 +186,7 @@ export function Comments() {
             <button
               onClick={() => setPage((p) => Math.min(pages, p + 1))}
               disabled={page >= pages}
-              className="h-7 rounded-[5px] border border-line px-2.5 text-muted transition-colors hover:border-line2 hover:text-fg disabled:opacity-40"
+              className="h-7 border border-line px-2.5 text-muted transition-colors hover:border-line2 hover:text-fg disabled:opacity-40"
             >
               Next
             </button>

@@ -16,7 +16,7 @@ const OPENS_AT = "2026-11-01T00:00:00+01:00";
 export default function MaintenancePage() {
   return (
     <div className="mx-auto max-w-[640px] py-16 sm:py-24">
-      <span className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-yes">
+      <span className="inline-flex items-center gap-2 border border-line px-3 py-1.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-yes">
         <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-yes" />
         Opening 1 November 2026
       </span>
@@ -31,7 +31,7 @@ export default function MaintenancePage() {
         one message the moment it opens — nothing else, ever.
       </p>
 
-      <div className="mt-7 rounded-card border border-line bg-surface p-5">
+      <div className="mt-7 panel p-5">
         <div className="flex items-baseline justify-between">
           <span className="text-[11px] font-medium uppercase tracking-[0.1em] text-dim">
             Opens in

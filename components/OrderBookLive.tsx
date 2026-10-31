@@ -17,46 +17,42 @@ type Book = {
 
 const ROWS = 4;
 
-function short(addr: string) {
-  return `${addr.slice(0, 4)}…${addr.slice(-3)}`;
-}
-
-function Price({ level, tone, max, onPick }: {
+function Row({
+  level,
+  tone,
+  max,
+  onPick,
+}: {
   level: Level;
   tone: "ask" | "bid";
   max: number;
   onPick: () => void;
 }) {
-  const pct = Math.max(3, (level.shares / max) * 100);
+  const pct = Math.max(4, (level.shares / max) * 100);
   return (
     <button
       type="button"
       onClick={onPick}
-      title="Use this price in the trade panel"
-      className="group relative flex h-8 w-full items-center justify-between px-4 text-[12.5px] transition-colors hover:bg-surface2/70"
+      className="relative flex h-9 w-full items-center gap-4 px-4 text-[12.5px] transition-colors hover:bg-surface2"
     >
       <span
-        className={`absolute inset-y-[3px] right-0 rounded-[3px] ${
-          tone === "ask" ? "bg-no/10" : "bg-yes/10"
-        } group-hover:opacity-70`}
-        style={{ width: `${pct}%` }}
         aria-hidden="true"
+        className={`absolute inset-y-0 right-0 ${tone === "ask" ? "bg-no/[0.08]" : "bg-yes/[0.08]"}`}
+        style={{ width: `${pct}%` }}
       />
       <span className={`num relative font-medium ${tone === "ask" ? "text-no" : "text-yes"}`}>
         {(level.price * 100).toFixed(1)}¢
       </span>
-      <span className="num relative w-16 text-right text-muted">{level.shares.toFixed(2)}</span>
-      <span className="num relative w-14 text-right text-[11px] text-dim">{short(level.maker)}</span>
+      <span className="num relative ml-auto text-muted">{level.shares.toFixed(2)}</span>
     </button>
   );
 }
 
-function Empty({ side }: { side: "ask" | "bid" }) {
+function Empty() {
   return (
-    <div className="flex h-8 items-center justify-between px-4 text-[12px] text-dim/60">
+    <div className="flex h-9 items-center gap-4 px-4 text-[12.5px] text-dim">
       <span>—</span>
-      <span className="w-16 text-right">—</span>
-      <span className="w-14 text-right text-[11px]">{side === "ask" ? "no offer" : "no bid"}</span>
+      <span className="ml-auto">—</span>
     </div>
   );
 }
@@ -65,7 +61,7 @@ export function OrderBookLive() {
   const { account, ensureChain, walletClient } = useWallet();
   const { setPick, version, bump } = useTradeState();
   const [book, setBook] = useState<Book | null>(null);
-  const [outcome, setOutcome] = useState<boolean>(true); // true = YES
+  const [outcome, setOutcome] = useState<boolean>(true);
   const [canceling, setCanceling] = useState<number | null>(null);
   const [note, setNote] = useState("");
 
@@ -85,8 +81,6 @@ export function OrderBookLive() {
 
   const asks = (book?.asks ?? []).filter((l) => l.isYes === outcome);
   const bids = (book?.bids ?? []).filter((l) => l.isYes === outcome);
-  // Show every order the wallet has, not just the outcome currently on screen —
-  // otherwise your No orders vanish when you are looking at Yes.
   const mine = book?.mine ?? [];
 
   const bestAsk = asks[0]?.price;
@@ -134,99 +128,80 @@ export function OrderBookLive() {
   }
 
   return (
-    <section className="overflow-hidden rounded-card border border-line bg-surface">
-      <header className="flex items-center justify-between border-b border-line px-4 py-3">
-        <h2 className="text-[13px] font-semibold tracking-tight">Order book</h2>
-        <div className="flex items-center gap-2">
-          <div className="flex rounded-[5px] border border-line p-0.5">
-            {[true, false].map((side) => (
-              <button
-                key={String(side)}
-                type="button"
-                onClick={() => setOutcome(side)}
-                className={`h-6 rounded-[3px] px-2.5 text-[11.5px] font-medium transition-colors ${
-                  outcome === side
-                    ? side
-                      ? "bg-yes text-black"
-                      : "bg-no text-black"
-                    : "text-muted hover:text-fg"
-                }`}
-              >
-                {side ? "Yes" : "No"}
-              </button>
-            ))}
-          </div>
-          <span className="text-[11px] text-dim">{book?.count ?? 0} placed</span>
+    <section className="panel">
+      <header className="panel-head">
+        <h2 className="panel-title">Order book</h2>
+        <div className="flex rounded-btn border border-line" role="tablist">
+          {[true, false].map((side) => (
+            <button
+              key={String(side)}
+              type="button"
+              role="tab"
+              aria-selected={outcome === side}
+              onClick={() => setOutcome(side)}
+              className={`h-7 px-3 text-[12px] font-medium transition-colors ${
+                outcome === side ? (side ? "text-yes" : "text-no") : "text-dim hover:text-muted"
+              }`}
+            >
+              {side ? "Yes" : "No"}
+            </button>
+          ))}
         </div>
       </header>
 
-      <div className="flex justify-between px-4 py-1.5 text-[10px] font-medium uppercase tracking-[0.1em] text-dim">
-        <span>Price</span>
-        <span className="w-16 text-right">Shares</span>
-        <span className="w-14 text-right">Maker</span>
+      <div className="flex items-center gap-4 border-b border-line px-4 py-2">
+        <span className="eyebrow">Price</span>
+        <span className="eyebrow ml-auto">Shares</span>
       </div>
 
-      <div className="divide-y divide-line/50">
+      <div>
         {askSlots.map((l, i) =>
           l ? (
-            <Price key={`a${l.id}`} level={l} tone="ask" max={max} onPick={() => pick(l)} />
+            <Row key={`a${l.id}`} level={l} tone="ask" max={max} onPick={() => pick(l)} />
           ) : (
-            <Empty key={`ae${i}`} side="ask" />
+            <Empty key={`ae${i}`} />
           ),
         )}
       </div>
 
-      <div className="flex items-center justify-between border-y border-line bg-surface2/60 px-4 py-2">
-        <span className="text-[11px] text-dim">Spread</span>
-        <span className="num text-[12px] font-medium text-fg">
+      <div className="flex items-center justify-between border-y border-line bg-surface2 px-4 py-2">
+        <span className="eyebrow">Spread</span>
+        <span className="num text-[12.5px] text-fg">
           {bestAsk !== undefined && bestBid !== undefined
             ? `${((bestAsk - bestBid) * 100).toFixed(1)}¢`
             : "—"}
         </span>
       </div>
 
-      <div className="divide-y divide-line/50">
+      <div>
         {bidSlots.map((l, i) =>
           l ? (
-            <Price key={`b${l.id}`} level={l} tone="bid" max={max} onPick={() => pick(l)} />
+            <Row key={`b${l.id}`} level={l} tone="bid" max={max} onPick={() => pick(l)} />
           ) : (
-            <Empty key={`be${i}`} side="bid" />
+            <Empty key={`be${i}`} />
           ),
         )}
       </div>
 
       {asks.length === 0 && bids.length === 0 ? (
-        <p className="border-t border-line px-4 py-3 text-[11.5px] leading-relaxed text-muted">
-          Nothing resting on {outcome ? "Yes" : "No"} yet. Post an order from the panel and it
-          will appear here.
-        </p>
+        <p className="border-t border-line px-4 py-3 text-[12.5px] text-muted">Nothing resting.</p>
       ) : null}
-
-      <footer className="border-t border-line px-4 py-2.5 text-[11px] text-dim">
-        Click any price to load it into the trade panel.
-      </footer>
 
       {mine.length > 0 ? (
         <div className="border-t border-line">
-          <header className="px-4 py-2 text-[10px] font-medium uppercase tracking-[0.1em] text-dim">
-            Your open orders
-          </header>
-          <ul className="divide-y divide-line/50">
+          <p className="eyebrow px-4 pb-1 pt-3">Your orders</p>
+          <ul className="divide-y divide-line">
             {mine.map((o) => (
-              <li key={o.id} className="flex items-center justify-between px-4 py-2 text-[12px]">
-                <span className="text-muted">
-                  #{o.id} ·{" "}
-                  <span className={o.isYes ? "text-yes" : "text-no"}>
-                    {o.isYes ? "Yes" : "No"}
-                  </span>{" "}
-                  · <span className="num">{(o.price * 100).toFixed(1)}¢</span> ·{" "}
-                  <span className="num">{o.shares.toFixed(2)}</span> sh
-                </span>
+              <li key={o.id} className="flex items-center gap-3 px-4 py-2 text-[12.5px]">
+                <span className="num text-dim">#{o.id}</span>
+                <span className={o.isYes ? "text-yes" : "text-no"}>{o.isYes ? "Yes" : "No"}</span>
+                <span className="num text-muted">{(o.price * 100).toFixed(1)}¢</span>
+                <span className="num text-muted">{o.shares.toFixed(2)}</span>
                 <button
                   type="button"
                   onClick={() => cancel(o.id)}
                   disabled={canceling === o.id}
-                  className="rounded-[4px] border border-line px-2 py-1 text-[11px] text-muted transition-colors hover:border-line2 hover:text-fg disabled:opacity-40"
+                  className="ml-auto text-[11.5px] text-dim transition-colors hover:text-fg disabled:opacity-40"
                 >
                   {canceling === o.id ? "…" : "Cancel"}
                 </button>
@@ -237,7 +212,7 @@ export function OrderBookLive() {
       ) : null}
 
       {note ? (
-        <p aria-live="polite" className="border-t border-line px-4 py-2 text-[11px] text-dim">
+        <p aria-live="polite" className="border-t border-line px-4 py-2 text-[11.5px] text-dim">
           {note}
         </p>
       ) : null}

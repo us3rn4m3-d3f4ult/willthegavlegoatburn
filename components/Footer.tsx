@@ -1,101 +1,70 @@
 import Link from "next/link";
 import { SITE } from "@/lib/seo";
 
-const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
-  {
-    title: "Market",
-    links: [
-      { href: "/", label: "Trade" },
-      { href: "/how-it-works", label: "How it works" },
-      { href: "/rules", label: "Resolution rules" },
-      { href: "/goat-history", label: "Goat history" },
-    ],
-  },
-  {
-    title: "Legal",
-    links: [
-      { href: "/privacy", label: "Privacy statement" },
-      { href: "/terms", label: "Terms of use" },
-      { href: "/risk", label: "Risk disclosure" },
-      { href: "/cookies", label: "Cookies" },
-    ],
-  },
-  {
-    title: "Contact",
-    links: [
-      { href: "mailto:contact@willthegavlegoatburn.com", label: "contact@willthegavlegoatburn.com" },
-      { href: "/how-it-works", label: "How it works" },
-    ],
-  },
+const LINKS = [
+  { href: "/how-it-works", label: "How it works" },
+  { href: "/#resolves", label: "Resolution" },
+  { href: "/goat-history", label: "Goat history" },
+  { href: "/privacy", label: "Privacy" },
+  { href: "/terms", label: "Terms" },
+  { href: "/risk", label: "Risk" },
+  { href: "/cookies", label: "Cookies" },
 ];
 
 export function Footer() {
   return (
-    <footer className="mt-24 border-t border-line pb-24 lg:pb-0">
-      <div className="mx-auto max-w-[1120px] px-3 py-14 sm:px-6">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+    <footer className="mt-20 border-t border-line pb-24 lg:pb-0">
+      <div className="mx-auto max-w-[1200px] px-4 py-10 sm:px-8">
+        <div className="flex flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-[15px] font-semibold tracking-tight">willthegavlegoatburn</p>
-            <p className="mt-3 max-w-[26ch] text-[13px] leading-relaxed text-muted">
-              A non-custodial prediction market on whether the Gävle goat survives 2026.
+            <p className="text-[13px] font-medium text-fg">willthegavlegoatburn</p>
+            <p className="mt-2 max-w-[36ch] text-[12.5px] leading-relaxed text-muted">
+              Non-custodial prediction market on the Gävle goat. Base, USDC, no protocol fees.
             </p>
-            <p className="mt-4 text-[12px] text-dim">
-              Built on Base · Settled in USDC · No protocol fees
-            </p>
-            <p className="mt-1 text-[12px] text-dim">
-              You pay only your own network fee
-            </p>
-            <p className="mt-4 text-[12px] text-dim">
-              Open source —{" "}
-              <a
-                href={SITE.repo}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline decoration-line2 underline-offset-2 hover:text-muted"
-              >
-                source on GitHub
-              </a>
-            </p>
+            <a
+              href={SITE.repo}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 inline-block text-[12px] text-dim transition-colors hover:text-muted"
+            >
+              Source
+            </a>
           </div>
 
-          {COLUMNS.map((col) => (
-            <nav key={col.title} aria-label={col.title}>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-dim">
-                {col.title}
-              </p>
-              <ul className="mt-4 space-y-2.5">
-                {col.links.map((l) => (
-                  <li key={l.href + l.label}>
-                    <Link
-                      href={l.href}
-                      className="text-[13px] text-muted transition-colors hover:text-fg"
-                    >
-                      {l.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          ))}
+          <nav
+            aria-label="Footer"
+            className="grid grid-cols-2 gap-x-12 gap-y-2 text-[12.5px] sm:grid-cols-3"
+          >
+            {LINKS.map((l) => (
+              <Link
+                key={l.href + l.label}
+                href={l.href}
+                className="text-muted transition-colors hover:text-fg"
+              >
+                {l.label}
+              </Link>
+            ))}
+          </nav>
         </div>
 
-        <div className="mt-12 space-y-4 border-t border-line pt-8">
-          <p className="max-w-[75ch] text-[12px] leading-relaxed text-dim">
-            Unofficial fan project. Not affiliated with, endorsed by, or connected to Gävle
-            kommun, Visit Gävle, the Southern Merchants of Gävle, or the Natural Science Club of
-            Vasaskolan. &ldquo;Gävlebocken&rdquo; refers to the public artwork; no official imagery
-            is used.
+        <div className="mt-10 space-y-2 border-t border-line pt-6 text-[11.5px] leading-relaxed text-dim">
+          <p className="max-w-[92ch]">
+            Unofficial fan project. Not affiliated with Gävle kommun, Visit Gävle, the Southern
+            Merchants of Gävle, or the Natural Science Club of Vasaskolan.
           </p>
-          <p className="max-w-[75ch] text-[12px] leading-relaxed text-dim">
-            Trading involves the risk of losing your entire stake. Nothing here is investment
-            advice. Access is restricted in certain jurisdictions — see the{" "}
-            <Link href="/terms" className="underline decoration-line2 underline-offset-2 hover:text-muted">
-              Terms of use
+          <p className="max-w-[92ch]">
+            Trading can lose your entire stake. Not investment advice. 18+. Restricted in some
+            jurisdictions — see{" "}
+            <Link href="/terms" className="underline underline-offset-2 hover:text-muted">
+              Terms
             </Link>
-            . 18+.
+            .
           </p>
-          <p className="text-[12px] text-dim">
-            © {new Date().getFullYear()} willthegavlegoatburn
+          <p>
+            © {new Date().getFullYear()} willthegavlegoatburn ·{" "}
+            <a href="mailto:contact@willthegavlegoatburn.com" className="hover:text-muted">
+              contact@willthegavlegoatburn.com
+            </a>
           </p>
         </div>
       </div>

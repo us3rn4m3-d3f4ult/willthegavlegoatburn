@@ -40,7 +40,7 @@ export default function HowItWorksPage() {
 
       <ol className="mt-8 space-y-3">
         {STEPS.map((s) => (
-          <li key={s.n} className="rounded-card border border-line bg-surface p-5">
+          <li key={s.n} className="panel p-5">
             <div className="flex items-baseline gap-3">
               <span className="num text-[11px] font-semibold text-yes">{s.n}</span>
               <h2 className="text-[13.5px] font-semibold text-fg">{s.title}</h2>

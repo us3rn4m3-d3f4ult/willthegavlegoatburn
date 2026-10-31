@@ -4,21 +4,24 @@
    Design tokens — black canvas, ember accent, cool counter-side.
    ──────────────────────────────────────────────────────────── */
 @theme {
+  /* Pure black canvas. Panels are not filled — they are bounded by hairlines. */
   --color-bg: #000000;
-  --color-surface: #0b0b0d;
-  --color-surface2: #121216;
-  --color-line: #1c1c21;
-  --color-line2: #26262d;
-  --color-fg: #fafafa;
-  --color-muted: #8b8b93;
-  --color-dim: #5a5a62;
-  --color-yes: #ff5c2b;
-  --color-ember: #ffb020;
-  --color-no: #4c8dff;
+  --color-surface: #000000;
+  --color-surface2: #0e0e0e;
+  --color-line: #1b1b1b;
+  --color-line2: #333333;
+  --color-fg: #f2f2f2;
+  --color-muted: #909090;
+  --color-dim: #5c5c5c;
 
-  --radius-card: 8px;
-  --radius-btn: 6px;
-  --radius-pill: 4px;
+  /* Two semantic accents only, used for meaning and nothing decorative. */
+  --color-yes: #3fb950;
+  --color-no: #f85149;
+  --color-ember: #d29922;
+
+  --radius-card: 2px;
+  --radius-btn: 2px;
+  --radius-pill: 2px;
 
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI Variable Text",
     "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -48,20 +51,19 @@ body {
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--color-yes) 35%, transparent);
+  background: color-mix(in srgb, var(--color-yes) 30%, transparent);
   color: #fff;
 }
 
 *:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--color-yes) 75%, transparent);
+  outline: 1px solid var(--color-muted);
   outline-offset: 2px;
-  border-radius: 4px;
 }
 
 /* Thin, unobtrusive scrollbars on the order book. */
 .scroll-thin {
   scrollbar-width: thin;
-  scrollbar-color: #2a2a31 transparent;
+  scrollbar-color: #2a2a2a transparent;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -78,15 +80,15 @@ body {
    ──────────────────────────────────────────────────────────── */
 .legal {
   color: var(--color-muted);
-  font-size: 13.5px;
-  line-height: 1.75;
+  font-size: 13px;
+  line-height: 1.7;
 }
 .legal h2 {
   color: var(--color-fg);
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
-  letter-spacing: -0.01em;
-  margin-top: 2.25rem;
+  letter-spacing: 0.01em;
+  margin-top: 2rem;
   padding-top: 1.25rem;
   border-top: 1px solid var(--color-line);
 }
@@ -118,5 +120,93 @@ body {
 }
 .legal a:hover {
   text-decoration-color: var(--color-muted);
+}
+
+/* ────────────────────────────────────────────────────────────
+   Primitives — every surface in the app is built from these four.
+   ──────────────────────────────────────────────────────────── */
+@layer components {
+  .panel {
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    background-color: var(--color-bg);
+  }
+
+  .panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border-bottom: 1px solid var(--color-line);
+    padding: 0.75rem 1rem;
+  }
+
+  .panel-title {
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    color: var(--color-fg);
+  }
+
+  /* Small caps used only for column headers and stat labels. */
+  .eyebrow {
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-dim);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    height: 2.375rem;
+    padding: 0 0.875rem;
+    border: 1px solid var(--color-line2);
+    border-radius: var(--radius-btn);
+    background-color: transparent;
+    color: var(--color-fg);
+    font-size: 12.5px;
+    font-weight: 500;
+    transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease;
+  }
+  .btn:hover {
+    background-color: var(--color-surface2);
+  }
+  .btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
+
+  .btn-primary {
+    border-color: var(--color-fg);
+    background-color: var(--color-fg);
+    color: #000;
+    font-weight: 600;
+  }
+  .btn-primary:hover {
+    background-color: #d8d8d8;
+    border-color: #d8d8d8;
+  }
+
+  .input {
+    height: 2.75rem;
+    width: 100%;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-btn);
+    background-color: var(--color-bg);
+    padding: 0 0.75rem;
+    color: var(--color-fg);
+    font-variant-numeric: tabular-nums;
+  }
+  .input:focus {
+    outline: none;
+    border-color: var(--color-line2);
+  }
+  .input:disabled {
+    opacity: 0.5;
+  }
 }
 

@@ -40,7 +40,7 @@ export function RecoveryCodes({
           {codes.map((c) => (
             <li
               key={c}
-              className="num rounded-[7px] border border-line bg-black px-2.5 py-1.5 font-mono text-[12px] tracking-[0.06em] text-fg"
+              className="num border border-line px-2.5 py-1.5 font-mono text-[12px] tracking-[0.06em] text-fg"
             >
               {c}
             </li>

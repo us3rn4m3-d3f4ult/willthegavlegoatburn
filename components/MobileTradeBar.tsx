@@ -67,9 +67,9 @@ export function MobileTradeBar() {
               requestSide(true);
               setOpen(true);
             }}
-            className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-btn bg-yes text-[13px] font-semibold text-black"
+            className="flex h-11 flex-1 items-center justify-center gap-2 rounded-btn border border-yes/50 bg-yes/10 text-[13px] font-semibold text-yes"
           >
-            Buy Yes <span className="num text-[11.5px] font-medium opacity-80">{yesC}¢</span>
+            Buy Yes <span className="num text-[11.5px] font-medium opacity-70">{yesC}¢</span>
           </button>
           <button
             type="button"
@@ -77,9 +77,9 @@ export function MobileTradeBar() {
               requestSide(false);
               setOpen(true);
             }}
-            className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-btn bg-no text-[13px] font-semibold text-black"
+            className="flex h-11 flex-1 items-center justify-center gap-2 rounded-btn border border-no/50 bg-no/10 text-[13px] font-semibold text-no"
           >
-            Buy No <span className="num text-[11.5px] font-medium opacity-80">{noC}¢</span>
+            Buy No <span className="num text-[11.5px] font-medium opacity-70">{noC}¢</span>
           </button>
         </div>
       </div>
@@ -93,17 +93,15 @@ export function MobileTradeBar() {
             className="absolute inset-0 bg-black/75"
           />
           <div
-            className="absolute inset-x-0 bottom-0 max-h-[90dvh] overflow-y-auto rounded-t-2xl border-t border-line bg-black px-3 pb-24 pt-3"
-            style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom))" }}
+            className="absolute inset-x-0 bottom-0 max-h-[92dvh] overflow-y-auto border-t border-line bg-black px-3 pt-3"
+            style={{ paddingBottom: "calc(5rem + env(safe-area-inset-bottom))" }}
           >
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-[11px] font-medium uppercase tracking-[0.1em] text-dim">
-                Trade
-              </span>
+            <div className="mb-3 flex items-center justify-between">
+              <span className="eyebrow">Trade</span>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="rounded-[4px] border border-line px-2 py-1 text-[11.5px] text-muted"
+                className="h-7 border border-line px-2.5 text-[11.5px] text-muted"
               >
                 Close
               </button>

@@ -138,7 +138,7 @@ export function AccountView() {
 
   if (!me?.user) {
     return (
-      <div className="rounded-card border border-line bg-surface p-5">
+      <div className="panel p-5">
         <p className="text-[12.5px] text-muted">
           You are not signed in. You need an account to trade. It holds no funds: your USDC
           stays in the contract and only your wallet can move it.
@@ -181,7 +181,7 @@ export function AccountView() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4 rounded-card border border-line bg-surface p-5">
+      <div className="flex items-center gap-4 panel p-5">
         <AbstractAvatar seed={me.user.email} size={48} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-[14px] font-medium text-fg">{me.user.email}</p>
@@ -203,7 +203,7 @@ export function AccountView() {
         </button>
       </div>
 
-      <section className="rounded-card border border-line bg-surface p-5">
+      <section className="panel p-5">
         <h2 className="text-[13px] font-semibold text-fg">Change password</h2>
         <form onSubmit={onChangePassword} className="mt-3 space-y-2.5">
           <input
@@ -238,7 +238,7 @@ export function AccountView() {
       {error ? <p className="text-[12px] text-yes">{error}</p> : null}
       {notice ? <p className="text-[12px] text-no">{notice}</p> : null}
 
-      <section className="rounded-card border border-line bg-surface p-5">
+      <section className="panel p-5">
         <h2 className="text-[13px] font-semibold text-fg">Recovery codes</h2>
         <p className="mt-1.5 text-[12px] leading-relaxed text-muted">
           <span className="num font-medium text-fg">{me.recoveryRemaining ?? 0}</span> of 10

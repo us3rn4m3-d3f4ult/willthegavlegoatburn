@@ -1,15 +1,12 @@
 import Link from "next/link";
 import { MARKET, GOAT_HISTORY } from "@/lib/market";
-import { Countdown } from "@/components/Countdown";
 import { TradePanel } from "@/components/TradePanel";
 import { Comments } from "@/components/Comments";
 import { LiveMarket } from "@/components/LiveMarket";
 import { OrderBookLive } from "@/components/OrderBookLive";
 import { RecentTrades } from "@/components/RecentTrades";
 import { TradeProvider } from "@/components/TradeProvider";
-import { HowTradingWorks } from "@/components/HowTradingWorks";
 import { MobileTradeBar } from "@/components/MobileTradeBar";
-import { fmtCompact, fmtUsd } from "@/lib/format";
 import { FAQ, SITE, faqJsonLd } from "@/lib/seo";
 import type { Metadata } from "next";
 
@@ -19,124 +16,101 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
-function Stat({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div>
-      <dt className="text-[10.5px] font-medium uppercase tracking-[0.1em] text-dim">{label}</dt>
-      <dd className="num mt-1 text-[14px] font-medium text-fg">{value}</dd>
-    </div>
-  );
-}
+const RULES = [
+  { label: "Yes", text: "It catches fire at any point, however briefly, on purpose or not.", tone: "yes" },
+  { label: "No", text: "It never burns. Storm damage or a vehicle counts as No — nothing burned.", tone: "no" },
+  { label: "No goat", text: "If nothing is built, nothing burned.", tone: "no" },
+];
 
 export default function HomePage() {
   return (
     <TradeProvider>
-      <div className="grid gap-6 pt-6 pb-28 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8 lg:py-8">
-      <div className="min-w-0 space-y-6">
-        <section className="rounded-card border border-line bg-surface p-6">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-[4px] border border-yes/30 bg-yes/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-yes">
-              Live
-            </span>
-            <span className="rounded-[4px] border border-line px-2 py-1 text-[10px] font-medium text-muted">
-              Base - USDC
-            </span>
-            <span className="rounded-[4px] border border-ember/40 bg-ember/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-ember">
-              New
-            </span>
-          </div>
+      <div className="grid gap-14 pb-32 pt-10 lg:grid-cols-[minmax(0,1fr)_356px] lg:pt-14">
+        <div className="min-w-0 space-y-14">
+          <section>
+            <h1 className="max-w-[26ch] text-[32px] font-semibold leading-[1.08] tracking-[-0.03em] text-fg sm:text-[40px]">
+              {MARKET.question}
+            </h1>
+            <LiveMarket />
+          </section>
 
-          <h1 className="mt-4 max-w-[40ch] text-[26px] font-semibold leading-[1.15] tracking-[-0.02em] text-fg sm:text-[30px]">
-            {MARKET.question}
-          </h1>
+          <section id="resolves" className="scroll-mt-24 border-t border-line pt-7">
+            <h2 className="eyebrow">Resolution</h2>
+            <dl className="mt-4 divide-y divide-line">
+              {RULES.map((r) => (
+                <div key={r.label} className="flex gap-8 py-3 first:pt-0 last:pb-0">
+                  <dt
+                    className={`w-16 shrink-0 text-[12.5px] font-medium ${
+                      r.tone === "yes" ? "text-yes" : "text-no"
+                    }`}
+                  >
+                    {r.label}
+                  </dt>
+                  <dd className="text-[13px] leading-relaxed text-muted">{r.text}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
 
-          <LiveMarket />
-        </section>
+          <OrderBookLive />
 
-        <section
-          id="resolves"
-          className="scroll-mt-24 rounded-card border border-line bg-surface p-5"
-        >
-          <h2 className="text-[13px] font-semibold tracking-tight">How this resolves</h2>
-          <div className="mt-2.5 max-w-[70ch] space-y-2 text-[12.5px] leading-relaxed text-muted">
-            <p>
-              <span className="font-medium text-fg">Yes</span> if the goat catches fire at any
-              point - a scorched leg or the whole thing to the ground, deliberate or accidental.
-              <span className="font-medium text-fg"> Any fire counts.</span> It does not need to
-              be dismantled, destroyed or rebuilt, and the fire does not have to win.
-            </p>
-            <p>
-              <span className="font-medium text-fg">No</span> if it never burns. Damaged or
-              destroyed some other way - hit by a car in 2021, brought down by a storm in 2025 -
-              is <span className="font-medium text-fg">No</span>, because nothing burned.
-            </p>
-            <p>
-              If no goat goes up at all, nothing burned, so it settles{" "}
-              <span className="font-medium text-fg">No</span>.
-            </p>
-          </div>
-        </section>
+          <RecentTrades />
 
-        <OrderBookLive />
+          <Comments />
 
-        <RecentTrades />
-
-        <section className="rounded-card border border-line bg-surface p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-[13px] font-semibold tracking-tight">The goat has a history</h2>
+          <section className="border-t border-line pt-7">
+            <h2 className="eyebrow">Goat history</h2>
+            <ul className="mt-4 flex flex-wrap gap-x-12 gap-y-2 text-[13px]">
+              {GOAT_HISTORY.filter((g) => [1966, 2021, 2025].includes(g.year)).map((g) => (
+                <li key={g.year} className="num text-muted">
+                  <span className="text-fg">{g.year}</span>{" "}
+                  {g.burned ? (
+                    <span className="text-yes">burned</span>
+                  ) : (
+                    <span className="text-dim">no fire</span>
+                  )}
+                </li>
+              ))}
+            </ul>
             <Link
               href="/goat-history"
-              className="text-[12px] text-muted underline decoration-line2 underline-offset-2 hover:text-fg"
+              className="mt-4 inline-block text-[12.5px] text-muted transition-colors hover:text-fg"
             >
               All 60 years
             </Link>
-          </div>
-          <ul className="mt-3 grid gap-1.5 text-[12.5px] sm:grid-cols-3">
-            {GOAT_HISTORY.filter((g) => [1966, 2021, 2025].includes(g.year)).map((g) => (
-              <li key={g.year} className="text-muted">
-                <span className="num font-medium text-fg">{g.year}</span>{" "}
-                {g.burned ? (
-                  <span className="text-yes">- burned</span>
-                ) : (
-                  <span className="text-no">- not fire</span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
+          </section>
 
-        <Comments />
+          <section className="border-t border-line pt-7">
+            <h2 className="eyebrow">Questions</h2>
+            <div className="mt-2 divide-y divide-line">
+              {FAQ.map((item) => (
+                <details key={item.q} className="group py-4">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[13px] font-medium text-fg [&::-webkit-details-marker]:hidden">
+                    {item.q}
+                    <span
+                      aria-hidden="true"
+                      className="shrink-0 text-[15px] leading-none text-dim transition-transform duration-200 group-open:rotate-45"
+                    >
+                      +
+                    </span>
+                  </summary>
+                  <p className="mt-2 max-w-[76ch] text-[13px] leading-relaxed text-muted">
+                    {item.a}
+                  </p>
+                </details>
+              ))}
+            </div>
+          </section>
+        </div>
 
-        <section className="rounded-card border border-line bg-surface p-5">
-          <h2 className="text-[13px] font-semibold tracking-tight">Questions people ask</h2>
-          <div className="mt-3 divide-y divide-line">
-            {FAQ.map((item) => (
-              <details key={item.q} className="group py-3 first:pt-0 last:pb-0">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[12.5px] font-medium text-fg [&::-webkit-details-marker]:hidden">
-                  {item.q}
-                  <span
-                    aria-hidden="true"
-                    className="shrink-0 text-[16px] leading-none text-dim transition-transform duration-200 group-open:rotate-45"
-                  >
-                    +
-                  </span>
-                </summary>
-                <p className="mt-2 text-[12.5px] leading-relaxed text-muted">{item.a}</p>
-              </details>
-            ))}
-          </div>
-        </section>
-      </div>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd()) }}
+        />
 
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd()) }}
-      />
-
-      <aside className="hidden h-fit space-y-4 lg:sticky lg:top-24 lg:block">
-        <TradePanel mid={MARKET.mid} />
-        <HowTradingWorks />
-      </aside>
+        <aside className="hidden h-fit lg:sticky lg:top-20 lg:block">
+          <TradePanel mid={MARKET.mid} />
+        </aside>
       </div>
       <MobileTradeBar />
     </TradeProvider>

@@ -15,7 +15,7 @@ export default function RegisterPage() {
         Email and a password. You can delete it again in one click, permanently.
       </p>
 
-      <div className="mt-6 rounded-card border border-line bg-surface p-5">
+      <div className="mt-6 panel p-5">
         <AuthForm mode="register" />
       </div>
 

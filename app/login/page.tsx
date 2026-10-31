@@ -15,7 +15,7 @@ export default function LoginPage() {
         You need an account to trade. It holds a profile only, never funds.
       </p>
 
-      <div className="mt-6 rounded-card border border-line bg-surface p-5">
+      <div className="mt-6 panel p-5">
         <AuthForm mode="login" />
       </div>
 

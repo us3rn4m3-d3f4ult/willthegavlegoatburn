@@ -53,38 +53,31 @@ export function OpenOrders() {
   if (!BOOK_CONFIGURED) return null;
 
   return (
-    <section className="rounded-card border border-line bg-surface">
-      <header className="flex items-center justify-between border-b border-line px-4 py-3">
-        <h2 className="text-[13px] font-semibold tracking-tight">Open positions</h2>
-        <span className="text-[11px] text-dim">
-          {!account ? "connect a wallet" : orders === null ? "loading" : `${orders.length} open`}
+    <section className="panel">
+      <header className="panel-head">
+        <h2 className="panel-title">Open orders</h2>
+        <span className="num text-[11.5px] text-dim">
+          {!account ? "—" : orders === null ? "—" : orders.length}
         </span>
       </header>
 
       {!account ? (
-        <p className="px-4 py-4 text-[12.5px] leading-relaxed text-muted">
-          Connect a wallet to see your resting orders and close them.
-        </p>
+        <p className="px-4 py-5 text-[12.5px] text-muted">Connect a wallet to see your orders.</p>
       ) : orders && orders.length === 0 ? (
-        <p className="px-4 py-4 text-[12.5px] leading-relaxed text-muted">
-          No open orders. Anything you place at a limit price shows up here until it fills or
-          you close it.
-        </p>
+        <p className="px-4 py-5 text-[12.5px] text-muted">No open orders.</p>
       ) : (
-        <ul className="divide-y divide-line/50">
+        <ul className="divide-y divide-line">
           {(orders ?? []).map((o) => (
-            <li key={o.id} className="flex items-center justify-between px-4 py-2.5 text-[12.5px]">
-              <span className="text-muted">
-                #{o.id} ·{" "}
-                <span className={o.isYes ? "text-yes" : "text-no"}>{o.isYes ? "Yes" : "No"}</span>{" "}
-                · <span className="num">{(o.price * 100).toFixed(1)}¢</span> ·{" "}
-                <span className="num">{o.shares.toFixed(2)}</span> sh
-              </span>
+            <li key={o.id} className="flex items-center gap-3 px-4 py-2.5 text-[12.5px]">
+              <span className="num text-dim">#{o.id}</span>
+              <span className={o.isYes ? "text-yes" : "text-no"}>{o.isYes ? "Yes" : "No"}</span>
+              <span className="num text-muted">{(o.price * 100).toFixed(1)}¢</span>
+              <span className="num text-muted">{o.shares.toFixed(2)} sh</span>
               <button
                 type="button"
                 onClick={() => cancel(o.id)}
                 disabled={busy === o.id}
-                className="rounded-[4px] border border-line px-2.5 py-1 text-[11px] text-muted transition-colors hover:border-line2 hover:text-fg disabled:opacity-40"
+                className="ml-auto h-7 border border-line px-2.5 text-[11.5px] text-muted transition-colors hover:border-line2 hover:text-fg disabled:opacity-40"
               >
                 {busy === o.id ? "…" : "Close"}
               </button>
@@ -94,7 +87,7 @@ export function OpenOrders() {
       )}
 
       {note ? (
-        <p aria-live="polite" className="border-t border-line px-4 py-2 text-[11px] text-dim">
+        <p aria-live="polite" className="border-t border-line px-4 py-2 text-[11.5px] text-dim">
           {note}
         </p>
       ) : null}

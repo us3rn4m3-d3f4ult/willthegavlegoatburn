@@ -2,31 +2,47 @@ import Link from "next/link";
 import { AbstractAvatar } from "./AbstractAvatar";
 import { ConnectWallet } from "./WalletProvider";
 
+const NAV = [
+  { href: "/how-it-works", label: "How it works" },
+  { href: "/#resolves", label: "Rules" },
+  { href: "/goat-history", label: "History" },
+];
+
 export function Header({ seed = "guest" }: { seed?: string }) {
   return (
-    <header className="sticky top-0 z-50 border-b border-line bg-black/70 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-[1120px] items-center justify-between px-6">
+    <header className="sticky top-0 z-50 border-b border-line bg-black/90 backdrop-blur">
+      <div className="mx-auto flex h-14 max-w-[1200px] items-center gap-8 px-4 sm:px-8">
         <Link
           href="/"
           aria-label="willthegavlegoatburn 2026 — home"
-          className="flex items-center gap-2.5 transition-opacity hover:opacity-80"
+          className="flex items-baseline gap-1.5 transition-opacity hover:opacity-75"
         >
-          <span className="text-[15px] font-semibold leading-none tracking-tight text-fg">
+          <span className="text-[13.5px] font-semibold tracking-tight text-fg">
             willthegavlegoatburn
           </span>
-          <span className="inline-flex h-[20px] shrink-0 items-center rounded-[4px] bg-white px-1.5 text-[10.5px] font-bold leading-none tracking-wide text-black">
-            2026
-          </span>
+          <span className="num text-[11px] font-medium text-dim">2026</span>
         </Link>
 
-        <div className="flex items-center gap-2">
+        <nav aria-label="Sections" className="hidden items-center gap-7 sm:flex">
+          {NAV.map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              className="text-[12.5px] text-muted transition-colors hover:text-fg"
+            >
+              {l.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="ml-auto flex items-center gap-3">
           <ConnectWallet />
           <Link
             href="/account"
             aria-label="Your account"
-            className="inline-flex items-center rounded-[9px] ring-1 ring-line2 transition-all hover:brightness-110"
+            className="opacity-75 transition-opacity hover:opacity-100"
           >
-            <AbstractAvatar seed={seed} size={32} />
+            <AbstractAvatar seed={seed} size={26} />
           </Link>
         </div>
       </div>
