@@ -3,7 +3,35 @@
 A non-custodial prediction market on whether the Gävle goat burns in 2026.
 Settled in USDC on Base. No fees, no house, no custody.
 
-**Status:** front-end only. Contracts, auth API and indexer are next.
+**Status:** front-end deployed to the server; `GavleGoatMarket` contract + test suite
+passing locally. Auth API and indexer are next.
+
+---
+
+## Contracts
+
+```bash
+# Foundry is vendored locally in .tools/ (gitignored)
+cd contracts
+../path/to/forge test -vv
+```
+
+`GavleGoatMarket.sol` — one market, one question, USDC, **zero fees**:
+
+| Area | Functions |
+|---|---|
+| Collateral | `deposit`, `withdraw` (never pausable) |
+| Shares | `split` (1 USDC → 1 YES + 1 NO), `merge` |
+| Book | `placeAsk`, `placeBid` (USDC escrowed), `fillAsk`, `fillBid`, `cancelOrder` |
+| Resolution | `proposeResolution` (resolver, 72h timelock, freezes the book), `finalizeResolution`, `voidMarket`, `redeem`, `redeemVoided` |
+
+No owner. No fee switch. No treasury. No upgrade path. The only privileged action
+is proposing which side won, and it cannot move funds — if the resolver vanishes,
+`voidMarket()` returns 0.5 per share to everyone, permissionlessly.
+
+Invariants asserted in the suite: `solvencyGap() >= 0` always, `totalYes == totalNo`
+while trading, third parties cannot cancel a live order, fills revert the instant
+the market is closed or a resolution is proposed.
 
 ---
 
