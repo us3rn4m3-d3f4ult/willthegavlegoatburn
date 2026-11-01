@@ -8,7 +8,15 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: "/(.*)",
+        // Documents must not be cached: they reference build output by content
+        // hash, so a page cached across a deploy requests chunks that no longer
+        // exist and React reports "a client-side exception has occurred".
+        source: "/:path*",
+        has: [{ type: "header", key: "accept", value: ".*text/html.*" }],
+        headers: [{ key: "Cache-Control", value: "no-store, must-revalidate" }],
+      },
+      {
+        source: "/:path*",
         headers: [
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },

@@ -38,6 +38,17 @@ willthegavlegoatburn.com {
     -Server
   }
 
+  # Documents are never cacheable. A page carries the content hashes of the build
+  # it came from, so one served across a deploy asks for chunks that no longer
+  # exist and React shows "Application error: a client-side exception has
+  # occurred". Next sets an aggressive s-maxage on these, so override it here.
+  @document not path /_next/static/* /favicon.ico /icon.svg /apple-icon.png /opengraph-image*
+  header @document Cache-Control "no-store, must-revalidate"
+
+  # Hashed build output is the opposite case: the name changes when the bytes do.
+  @immutable path /_next/static/*
+  header @immutable Cache-Control "public, max-age=31536000, immutable"
+
   # Credential-endpoint rate limiting is done at Cloudflare (WAF rate rules)
   # because `rate_limit` needs the xcaddy-built plugin, not stock caddy:2-alpine.
   # If you later build a custom Caddy image, add it here.
