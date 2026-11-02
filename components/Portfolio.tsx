@@ -158,8 +158,6 @@ export function Portfolio() {
   const wallet = snap?.wallet ?? 0;
   const total = cash + shares + wallet;
 
-  const cashNote = "money in the market";
-
   const row = (label: string, value: string, note: string) => (
     <div key={label} className="flex items-baseline justify-between gap-4 px-4 py-2.5">
       <div className="min-w-0">
@@ -183,7 +181,7 @@ export function Portfolio() {
         </p>
       ) : null}
 
-      <div className="px-4 py-4">
+      <div className="px-4 py-4 text-right">
         <p className="num text-[30px] font-semibold leading-none tracking-[-0.02em] text-fg">
           {usd(total)}
         </p>
@@ -191,13 +189,13 @@ export function Portfolio() {
       </div>
 
       <dl className="divide-y divide-line border-t border-line">
-        {row("Cash", usd(cash), cashNote)}
+        {row("Cash", usd(cash), "money in the market")}
         {row(
           "Shares",
           usd(shares),
-          `${(snap?.yes ?? 0).toFixed(0)} Yes + ${(snap?.no ?? 0).toFixed(0)} No`,
+          `${(snap?.yes ?? 0).toFixed(0)} Yes + ${(snap?.no ?? 0).toFixed(0)} No, $1 each if they win`,
         )}
-        {row("Wallet", usd(wallet), "not in the market")}
+        {row("Wallet", usd(wallet), "USDC still outside the market")}
       </dl>
 
       {failed ? (

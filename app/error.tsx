@@ -6,7 +6,6 @@ import { useEffect } from "react";
 /** Route-level boundary: keeps the header and footer, reports the error. */
 export default function Error({
   error,
-  reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
@@ -32,23 +31,20 @@ export default function Error({
         This page failed to load.
       </h1>
       <p className="mt-3 text-[13px] leading-relaxed text-muted">
-        Often a leftover copy of the site from before an update. Reload to fetch the current
-        version — if it keeps happening, the market is still readable at the link below.
+        Usually a leftover copy of the site from before an update. Reloading fetches the current
+        version; the market itself is unaffected and still readable from the home page.
       </p>
       {error.digest ? (
         <p className="num mt-3 text-[11px] text-dim">Reference: {error.digest}</p>
       ) : null}
 
       <div className="mt-6 flex flex-wrap items-center gap-2">
-        <button type="button" onClick={reset} className="btn btn-primary h-9 px-4">
-          Try again
-        </button>
         <button
           type="button"
           onClick={() => window.location.reload()}
-          className="btn h-9 px-4 text-[12.5px]"
+          className="btn btn-primary h-9 px-4"
         >
-          Reload
+          Reload the page
         </button>
         <Link href="/" className="text-[12.5px] text-muted transition-colors hover:text-fg">
           Back to the market

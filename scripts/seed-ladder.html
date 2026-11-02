@@ -44,10 +44,11 @@
   </head>
   <body>
     <main>
-      <h1>Seed the order book</h1>
+      <h1>Build an order-book ladder</h1>
       <p class="lede">
-        Runs in this browser only. Your wallet signs every transaction — no key is typed, stored or
-        sent anywhere. Close the tab when you are done.
+        Spreads a budget across three price levels on each side, so a trade of any size finds depth
+        instead of sweeping a single order. Runs in this browser only — your wallet signs every
+        transaction, no key is typed or stored anywhere.
       </p>
 
       <fieldset>
@@ -70,33 +71,30 @@
       </fieldset>
 
       <fieldset>
-        <legend>What to seed</legend>
+        <legend>The ladder</legend>
         <div class="grid">
           <div>
-            <label for="deposit">Deposit into market (USDC)</label>
-            <input id="deposit" value="97" inputmode="decimal" />
+            <label for="budget">Total to put in (USDC)</label>
+            <input id="budget" value="97" inputmode="decimal" />
           </div>
           <div>
-            <label for="split">Split into Yes + No (USDC)</label>
-            <input id="split" value="50" inputmode="decimal" />
+            <label for="levels">Levels per side</label>
+            <input id="levels" value="3" inputmode="numeric" />
           </div>
           <div>
-            <label for="askCents">Ask price (¢)</label>
-            <input id="askCents" value="52" inputmode="decimal" />
+            <label for="askPrices">Sell prices (¢, near → far)</label>
+            <input id="askPrices" value="52, 56, 60" inputmode="decimal" />
           </div>
           <div>
-            <label for="askShares">Ask size (shares per outcome)</label>
-            <input id="askShares" value="50" inputmode="decimal" />
-          </div>
-          <div>
-            <label for="bidCents">Bid price (¢)</label>
-            <input id="bidCents" value="47" inputmode="decimal" />
-          </div>
-          <div>
-            <label for="bidShares">Bid size (shares per outcome)</label>
-            <input id="bidShares" value="50" inputmode="decimal" />
+            <label for="bidPrices">Buy prices (¢, near → far)</label>
+            <input id="bidPrices" value="48, 44, 40" inputmode="decimal" />
           </div>
         </div>
+        <p class="hint">
+          Half the budget becomes shares to sell (split 40 / 30 / 30 across the levels, nearest
+          first), half is cash to buy with (a third of it per level). Everything is reversible:
+          Unwind cancels the orders, merges the pairs and withdraws the money.
+        </p>
         <div class="row">
           <button id="check" disabled>Check (no transactions)</button>
           <button id="seed" class="primary" disabled>Seed the book</button>
@@ -230,17 +228,45 @@
         return { trading, closesAt, minShares, walletUsdc, eth, allowance, credited, freeYes, freeNo, open };
       }
 
+      const parsePrices = (raw) =>
+        raw
+          .split(",")
+          .map((v) => Number(v.trim()))
+          .filter((v) => Number.isFinite(v) && v > 0);
+      const WEIGHTS = { 1: [100], 2: [60, 40], 3: [40, 30, 30] };
+      const isYesOrNo = [true, false];
+
       function plan(s) {
-        const deposit = parseUnits($("deposit").value.trim() || "0", 6);
-        const split = parseUnits($("split").value.trim() || "0", 6);
-        const askPrice = BigInt(Math.round(Number($("askCents").value) * 100)) * PRICE_STEP;
-        const askSh = parseUnits($("askShares").value.trim() || "0", 6);
-        const bidPrice = BigInt(Math.round(Number($("bidCents").value) * 100)) * PRICE_STEP;
-        const bidSh = parseUnits($("bidShares").value.trim() || "0", 6);
-        const bidCost = ((bidSh * bidPrice) / SCALE) * 2n;
-        const needSplit = askSh > s.freeYes || askSh > s.freeNo ? askSh : 0n;
-        const topUp = deposit > s.credited ? deposit - s.credited : 0n;
-        return { deposit, split, askPrice, askSh, bidPrice, bidSh, bidCost, needSplit, topUp };
+        const budget = parseUnits($("budget").value.trim() || "0", 6);
+        const askPrices = parsePrices($("askPrices").value);
+        const bidPrices = parsePrices($("bidPrices").value);
+        const levels = Math.min(askPrices.length, bidPrices.length, 3) || 0;
+        const weights = WEIGHTS[levels] ?? [];
+
+        // Half the budget becomes shares to sell (split across the levels, nearest
+        // first); the other half is the cash the buy levels may spend.
+        const split = budget / 2n;
+        const asks = [];
+        for (let i = 0; i < levels; i++) {
+          const shares = (split * BigInt(weights[i])) / 100n;
+          const price = BigInt(Math.round(askPrices[i] * 100)) * PRICE_STEP;
+          for (const isYes of isYesOrNo) asks.push({ isYes, shares, price });
+        }
+
+        const perLevel = levels ? (budget - split) / BigInt(levels * 2) : 0n;
+        const bids = [];
+        for (let i = 0; i < levels; i++) {
+          const price = BigInt(Math.round(bidPrices[i] * 100)) * PRICE_STEP;
+          const shares = (perLevel * SCALE) / price;
+          for (const isYes of isYesOrNo) bids.push({ isYes, shares, price });
+        }
+
+        const bidCost = bids.reduce((sum, o) => sum + (o.shares * o.price) / SCALE, 0n);
+        const freeMin = s.freeYes < s.freeNo ? s.freeYes : s.freeNo;
+        const needSplit = split > freeMin ? split - freeMin : 0n;
+        const topUp = budget > s.credited ? budget - s.credited : 0n;
+
+        return { budget, levels, asks, bids, bidCost, split, needSplit, topUp, askPrices, bidPrices };
       }
 
       async function check() {
@@ -259,20 +285,34 @@
         let problems = 0;
         const bad = (m) => { problems += 1; err(m); };
 
+        const count = p.asks.length + p.bids.length;
         if (!s.trading) bad("market is not trading — seeding would revert");
-        if (s.open + 4n > 32n) bad("too many open orders — cancel some first");
-        if (p.askPrice <= p.bidPrice) bad("ask must be above the bid");
-        if (p.askSh < s.minShares || p.bidSh < s.minShares) bad("size below the market minimum");
-        if (p.split > 0n && p.split < p.askSh) bad("split is smaller than the ask size");
-        if (p.topUp > s.walletUsdc) bad(`wallet is short ${usd(p.topUp - s.walletUsdc)} for the deposit`);
-        if (p.bidCost > s.credited + p.topUp - p.split) bad(`bids need ${usd(p.bidCost)} but only ${usd(s.credited + p.topUp - p.split)} would be credited`);
+        if (p.levels < 1) bad("give at least one price on each side");
+        if (BigInt(s.open) + BigInt(count) > 32n) bad(`that is ${count} orders and only ${32 - Number(s.open)} slots are left`);
+        if (p.topUp > s.walletUsdc) bad(`wallet is short ${usd(p.topUp - s.walletUsdc)} of the budget`);
+        if (p.askPrices[0] <= p.bidPrices[0]) bad("the first sell price must be above the first buy price");
+        if ([...p.asks, ...p.bids].some((o) => o.shares < s.minShares)) bad("a level came out below 1 share — raise the budget");
+
+        const cashFree = s.credited + p.topUp - p.needSplit;
+        if (p.bidCost > cashFree) bad(`buy levels need ${usd(p.bidCost)} but only ${usd(cashFree)} would be free`);
+
+        log("— the ladder —");
+        for (let i = 0; i < p.levels; i++) {
+          const ask = p.asks[i * 2];
+          const bid = p.bids[i * 2];
+          log(
+            `  ${i + 1}.  sell ${sh(ask.shares)} @ ${p.askPrices[i]}¢   ·   buy ${sh(bid.shares)} @ ${p.bidPrices[i]}¢`,
+          );
+        }
+        log(
+          `  ${count} orders · ${usd(p.bidCost)} held by the buys · ${usd(p.split)} turned into shares`,
+        );
 
         log("— would do —");
         if (p.topUp > s.allowance) log(`  approve ${usd(p.topUp)} USDC`);
         if (p.topUp > 0n) log(`  deposit ${usd(p.topUp)} USDC`);
-        if (p.needSplit > 0n) log(`  split ${usd(p.needSplit)} -> Yes + No`);
-        log(`  ask Yes and No, ${sh(p.askSh)} each @ ${cents(p.askPrice)}`);
-        log(`  bid Yes and No, ${sh(p.bidSh)} each @ ${cents(p.bidPrice)} (${usd(p.bidCost)} escrowed)`);
+        if (p.needSplit > 0n) log(`  split ${usd(p.needSplit)} into Yes + No`);
+        log(`  place ${p.asks.length} sell orders and ${p.bids.length} buy orders`);
         return { s, p, problems };
       }
 
@@ -383,27 +423,29 @@
           }
 
           if (p.needSplit > 0n) {
+            const wantYes = s.freeYes + p.needSplit;
+            const wantNo = s.freeNo + p.needSplit;
             await send(`split ${usd(p.needSplit)}`, () => write("split", [p.needSplit]),
-              async () => (await freeNow(true)) >= p.askSh && (await freeNow(false)) >= p.askSh);
+              async () => (await freeNow(true)) >= wantYes && (await freeNow(false)) >= wantNo);
           }
 
           let expected = await openNow();
-          for (const isYes of [true, false]) {
+          for (const o of p.asks) {
             expected += 1n;
             const want = expected;
-            await send(`ask ${isYes ? "Yes" : "No"} ${sh(p.askSh)} @ ${cents(p.askPrice)}`,
-              () => write("placeAsk", [isYes, p.askSh, p.askPrice, s.closesAt]),
+            await send(`sell ${o.isYes ? "Yes" : "No"} ${sh(o.shares)} @ ${cents(o.price)}`,
+              () => write("placeAsk", [o.isYes, o.shares, o.price, s.closesAt]),
               async () => (await openNow()) >= want);
           }
-          for (const isYes of [true, false]) {
+          for (const o of p.bids) {
             expected += 1n;
             const want = expected;
-            await send(`bid ${isYes ? "Yes" : "No"} ${sh(p.bidSh)} @ ${cents(p.bidPrice)}`,
-              () => write("placeBid", [isYes, p.bidSh, p.bidPrice, s.closesAt]),
+            await send(`buy ${o.isYes ? "Yes" : "No"} ${sh(o.shares)} @ ${cents(o.price)}`,
+              () => write("placeBid", [o.isYes, o.shares, o.price, s.closesAt]),
               async () => (await openNow()) >= want);
           }
 
-          ok("seeded — reload the site to see the ladder");
+          ok("ladder placed — reload the site to see it");
           await ladder();
         } catch (e) {
           err(e.shortMessage ?? e.message ?? String(e));
