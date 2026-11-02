@@ -16,6 +16,8 @@ export type BookLevel = {
   shares: number;
   maker: string;
   isYes: boolean;
+  /** Only set on `mine`: a resting ask escrows shares, a bid escrows USDC. */
+  isAsk?: boolean;
 };
 
 export type Book = {

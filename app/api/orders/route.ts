@@ -20,11 +20,13 @@ export async function GET(req: Request) {
 
     const asks: Level[] = [];
     const bids: Level[] = [];
-    const mine: Level[] = [];
+    const mine: (Level & { isAsk: boolean })[] = [];
 
     for (const level of levels) {
       const { isAsk, ...publicLevel } = level;
-      if (maker && level.maker.toLowerCase() === maker) mine.push(publicLevel);
+      // `mine` keeps `isAsk`, because a caller's own orders are the one place
+      // where it is needed: a resting bid has USDC escrowed, an ask has shares.
+      if (maker && level.maker.toLowerCase() === maker) mine.push({ ...publicLevel, isAsk });
       (isAsk ? asks : bids).push(publicLevel);
     }
 

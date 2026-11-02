@@ -11,6 +11,7 @@ import {
 } from "@/lib/web3";
 import { useWallet } from "@/components/WalletProvider";
 import { useSession } from "@/components/useSession";
+import { useOrderBook } from "@/components/useOrderBook";
 import { WalletDeepLinks } from "@/components/WalletDeepLinks";
 
 type Snap = {
@@ -137,9 +138,20 @@ export function Portfolio() {
     );
   }
 
+  const { book } = useOrderBook(addr);
+
   const p = price ?? 0.5;
-  const portfolio =
-    (snap?.yes ?? 0) * p + (snap?.no ?? 0) * (1 - p) + (snap?.inMarket ?? 0) + (snap?.wallet ?? 0);
+  const mine = book?.mine ?? [];
+  // A resting bid has already left the available balance: the contract holds
+  // that USDC until the order fills or is cancelled. Without it the total
+  // silently under-reports by whatever is committed to open orders.
+  const lockedUsdc = mine
+    .filter((o) => o.isAsk === false)
+    .reduce((sum, o) => sum + o.price * o.shares, 0);
+  const yesValue = (snap?.yes ?? 0) * p;
+  const noValue = (snap?.no ?? 0) * (1 - p);
+  const total = yesValue + noValue + (snap?.inMarket ?? 0) + (snap?.wallet ?? 0) + lockedUsdc;
+  const openCount = mine.length || (snap?.orders ?? 0);
 
   const tile = (label: string, value: string, note?: string) => (
     <div key={label} className="border border-line px-3 py-2.5">
@@ -163,21 +175,33 @@ export function Portfolio() {
       ) : null}
 
       <div className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-3">
-        {tile("In wallet", usd(snap?.wallet ?? 0))}
-        {tile("In market", usd(snap?.inMarket ?? 0))}
-        {tile("Total", usd(portfolio))}
+        {tile("Ready to trade", usd(snap?.inMarket ?? 0), "USDC inside the market")}
+        {tile("In your wallet", usd(snap?.wallet ?? 0), "not deposited yet")}
+        {tile(
+          "Locked in orders",
+          usd(lockedUsdc),
+          openCount === 1 ? "1 open order" : `${openCount} open orders`,
+        )}
+        {tile("Total", usd(total), "all of it, at this price")}
         {tile(
           "Yes shares",
           (snap?.yes ?? 0).toFixed(2),
-          snap && snap.lockedYes > 0 ? `${snap.lockedYes.toFixed(2)} on sale` : undefined,
+          snap && snap.lockedYes > 0 ? `${snap.lockedYes.toFixed(2)} on sale` : `worth ${usd(yesValue)}`,
         )}
         {tile(
           "No shares",
           (snap?.no ?? 0).toFixed(2),
-          snap && snap.lockedNo > 0 ? `${snap.lockedNo.toFixed(2)} on sale` : undefined,
+          snap && snap.lockedNo > 0 ? `${snap.lockedNo.toFixed(2)} on sale` : `worth ${usd(noValue)}`,
         )}
-        {tile("Open orders", String(snap?.orders ?? 0))}
       </div>
+
+      <p className="border-t border-line px-4 py-2.5 text-[11px] leading-relaxed text-dim">
+        Your money is in one of three places, and Total counts all of them:
+        <span className="text-muted"> ready to trade</span> (USDC the market holds for you),
+        <span className="text-muted"> locked in orders</span> (a buy order holds its money until it
+        fills or you cancel), and
+        <span className="text-muted"> shares</span> (each is worth $1.00 if that side wins).
+      </p>
 
       {failed ? (
         <p className="px-4 pb-2 text-[11px] text-dim">Balance read failed. Retrying on reload.</p>
