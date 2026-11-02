@@ -111,6 +111,53 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     }, 4000);
     return () => clearTimeout(t);
   }, []);
+  // Mobile: approving inside the wallet app never tells the browser tab. Re-read
+  // the persisted WalletConnect session on load, and again every time the tab
+  // comes back to the foreground after the hand-off.
+  useEffect(() => {
+    const projectId = process.env.NEXT_PUBLIC_WC_PROJECT_ID;
+    if (!projectId) return;
+    let cancelled = false;
+
+    const restore = async () => {
+      try {
+        const { EthereumProvider } = await import("@walletconnect/ethereum-provider");
+        const wc = await EthereumProvider.init({
+          projectId,
+          chains: [CHAIN_ID_PUBLIC],
+          showQrModal: false,
+          metadata: {
+            name: "willthegavlegoatburn",
+            description: "Non-custodial prediction market on the Gavle goat",
+            url: "https://willthegavlegoatburn.com",
+            icons: ["https://willthegavlegoatburn.com/icon.svg"],
+          },
+        });
+        if (!wc.session) return;
+        const accs = (await wc.request({ method: "eth_accounts" })) as string[];
+        if (cancelled || !accs || accs.length === 0 || !accs[0]) return;
+        activeProvider = wc as unknown as Eip1193;
+        setAccount(accs[0] as Address);
+        const chainHex = (await wc.request({ method: "eth_chainId" })) as string;
+        setChainId(Number.parseInt(chainHex, 16));
+      } catch {
+        // No stored session, or the relay is unreachable: leave the button alone.
+      }
+    };
+
+    void restore();
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void restore();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, []);
+
   const connect = useCallback(async (target?: Announced) => {
     // MetaMask refuses a second wallet_requestPermissions while one is pending
     // (error -32002), which looks like "nothing happens". Never stack them.
@@ -323,20 +370,13 @@ export function ConnectWallet() {
   if (!anyProvider) {
     // No injected wallet: WalletConnect is the only way in from a mobile browser.
     return (
-      <div className="flex flex-col items-end gap-1">
-        <button
-          onClick={connectWalletConnect}
-          disabled={connecting}
-          className="h-8 rounded-btn bg-fg px-3 text-[12px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-60"
-        >
-          {connecting ? "Opening…" : "Connect wallet"}
-        </button>
-        {connectError ? (
-          <p className="max-w-[240px] text-right text-[10.5px] leading-relaxed text-dim">
-            {connectError}
-          </p>
-        ) : null}
-      </div>
+      <button
+        onClick={connectWalletConnect}
+        disabled={connecting}
+        className="h-8 rounded-btn bg-fg px-3 text-[12px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-60"
+      >
+        {connecting ? "Opening…" : "Connect wallet"}
+      </button>
     );
   }
 
