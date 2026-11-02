@@ -16,6 +16,10 @@ export function OpenOrders() {
   // The shared book already asks for `?maker=` when a wallet is connected.
   const orders = signedIn === true ? book?.mine ?? null : null;
 
+  const value = (o: { price: number; shares: number }) => o.price * o.shares;
+  const committed = (orders ?? []).reduce((sum, o) => sum + value(o), 0);
+  const bidCount = (orders ?? []).filter((o) => o.isAsk === false).length;
+
   async function cancel(id: number) {
     if (!account || !(await ensureChain())) return;
     const wc = walletClient();
@@ -48,7 +52,9 @@ export function OpenOrders() {
       <header className="panel-head">
         <h2 className="panel-title">Open orders</h2>
         <span className="num text-[11.5px] text-dim">
-          {signedIn !== true || !account ? "—" : orders === null ? "—" : orders.length}
+          {signedIn !== true || !account || orders === null
+            ? "—"
+            : `${orders.length} · $${committed.toFixed(2)}`}
         </span>
       </header>
 
@@ -72,6 +78,7 @@ export function OpenOrders() {
               <span className={o.isYes ? "text-yes" : "text-no"}>{o.isYes ? "Yes" : "No"}</span>
               <span className="num text-muted">{(o.price * 100).toFixed(1)}¢</span>
               <span className="num text-muted">{o.shares.toFixed(2)} sh</span>
+              <span className="num text-fg">${value(o).toFixed(2)}</span>
               <button
                 type="button"
                 onClick={() => cancel(o.id)}
@@ -84,6 +91,13 @@ export function OpenOrders() {
           ))}
         </ul>
       )}
+
+      {orders && orders.length > 0 ? (
+        <p className="border-t border-line px-4 py-2 text-[11px] leading-relaxed text-dim">
+          ${committed.toFixed(2)} is committed: a buy order keeps its USDC in the market until it
+          fills or you close it, a sell order pays you that amount when it fills.
+        </p>
+      ) : null}
 
       {note ? (
         <p aria-live="polite" className="border-t border-line px-4 py-2 text-[11.5px] text-dim">

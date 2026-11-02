@@ -145,13 +145,14 @@ export function Portfolio() {
   // A resting bid has already left the available balance: the contract holds
   // that USDC until the order fills or is cancelled. Without it the total
   // silently under-reports by whatever is committed to open orders.
-  const lockedUsdc = mine
-    .filter((o) => o.isAsk === false)
-    .reduce((sum, o) => sum + o.price * o.shares, 0);
+  const bids = mine.filter((o) => o.isAsk === false);
+  const lockedUsdc = bids.reduce((sum, o) => sum + o.price * o.shares, 0);
   const yesValue = (snap?.yes ?? 0) * p;
   const noValue = (snap?.no ?? 0) * (1 - p);
   const total = yesValue + noValue + (snap?.inMarket ?? 0) + (snap?.wallet ?? 0) + lockedUsdc;
-  const openCount = mine.length || (snap?.orders ?? 0);
+  const lockedNote = `${bids.length} buy ${bids.length === 1 ? "order" : "orders"}`;
+  const shareNote = (count: number, locked: number) =>
+    `${count.toFixed(2)} shares${locked > 0 ? `, ${locked.toFixed(2)} on sale` : ""}`;
 
   const tile = (label: string, value: string, note?: string) => (
     <div key={label} className="border border-line px-3 py-2.5">
@@ -180,19 +181,11 @@ export function Portfolio() {
         {tile(
           "Locked in orders",
           usd(lockedUsdc),
-          openCount === 1 ? "1 open order" : `${openCount} open orders`,
+          lockedUsdc > 0 ? lockedNote : "nothing committed",
         )}
         {tile("Total", usd(total), "all of it, at this price")}
-        {tile(
-          "Yes shares",
-          (snap?.yes ?? 0).toFixed(2),
-          snap && snap.lockedYes > 0 ? `${snap.lockedYes.toFixed(2)} on sale` : `worth ${usd(yesValue)}`,
-        )}
-        {tile(
-          "No shares",
-          (snap?.no ?? 0).toFixed(2),
-          snap && snap.lockedNo > 0 ? `${snap.lockedNo.toFixed(2)} on sale` : `worth ${usd(noValue)}`,
-        )}
+        {tile("Yes shares", usd(yesValue), shareNote(snap?.yes ?? 0, snap?.lockedYes ?? 0))}
+        {tile("No shares", usd(noValue), shareNote(snap?.no ?? 0, snap?.lockedNo ?? 0))}
       </div>
 
       <p className="border-t border-line px-4 py-2.5 text-[11px] leading-relaxed text-dim">
