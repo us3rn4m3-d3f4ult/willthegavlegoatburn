@@ -24,6 +24,7 @@ type WalletCtx = {
   connecting: boolean;
   wallets: Announced[];
   connect: (target?: Announced) => Promise<void>;
+  connectWalletConnect: () => Promise<void>;
   disconnect: () => void;
   ensureChain: () => Promise<boolean>;
   walletClient: () => WalletClient | null;
@@ -146,6 +147,48 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     }
   }, [wallets]);
 
+  /** WalletConnect: the only door in a mobile browser, via the wallet app. */
+  const connectWalletConnect = useCallback(async () => {
+    const projectId = process.env.NEXT_PUBLIC_WC_PROJECT_ID;
+    if (!projectId) {
+      setConnectError("WalletConnect is not configured yet.");
+      return;
+    }
+    setConnecting(true);
+    setConnectError("");
+    try {
+      const { EthereumProvider } = await import("@walletconnect/ethereum-provider");
+      const wc = await EthereumProvider.init({
+        projectId,
+        chains: [CHAIN_ID_PUBLIC],
+        showQrModal: true,
+        metadata: {
+          name: "willthegavlegoatburn",
+          description: "Non-custodial prediction market on the Gavle goat",
+          url: "https://willthegavlegoatburn.com",
+          icons: ["https://willthegavlegoatburn.com/icon.svg"],
+        },
+      });
+      await wc.connect();
+      const accs = (await wc.request({ method: "eth_accounts" })) as string[];
+      const first = accs && accs[0];
+      if (!first) {
+        setConnectError("The wallet returned no account.");
+        return;
+      }
+      activeProvider = wc as unknown as Eip1193;
+      setAccount(first as Address);
+      const chainHex = (await wc.request({ method: "eth_chainId" })) as string;
+      setChainId(Number.parseInt(chainHex, 16));
+      const eip = wc as unknown as Eip1193;
+      eip.on?.("accountsChanged", ((a: string[]) => setAccount((a[0] as Address) ?? null)) as never);
+      eip.on?.("chainChanged", ((id: string) => setChainId(Number.parseInt(id, 16))) as never);
+    } catch {
+      setConnectError("WalletConnect did not complete. Try again.");
+    } finally {
+      setConnecting(false);
+    }
+  }, []);
   const disconnect = useCallback(() => {
     setAccount(null);
   }, []);
@@ -202,12 +245,13 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       connecting,
       wallets,
       connect,
+      connectWalletConnect,
       disconnect,
       ensureChain,
       walletClient,
       connectError,
     }),
-    [account, chainId, hasProvider, connecting, wallets, connect, disconnect, ensureChain, walletClient, connectError],
+    [account, chainId, hasProvider, connecting, wallets, connect, connectWalletConnect, disconnect, ensureChain, walletClient, connectError],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -220,7 +264,7 @@ export function useWallet(): WalletCtx {
 }
 
 export function ConnectWallet() {
-  const { account, connect, disconnect, connecting, hasProvider, wrongChain, ensureChain, wallets, connectError } =
+  const { account, connect, connectWalletConnect, disconnect, connecting, hasProvider, wrongChain, ensureChain, wallets, connectError } =
     useWallet();
   const signedIn = useSession();
   const [copied, setCopied] = useState(false);
@@ -259,7 +303,16 @@ export function ConnectWallet() {
   }
 
   if (!anyProvider) {
-    return <span className="hidden text-[11.5px] text-dim sm:inline">No wallet detected</span>;
+    // No injected wallet: WalletConnect is the only way in from a mobile browser.
+    return (
+      <button
+        onClick={connectWalletConnect}
+        disabled={connecting}
+        className="h-8 rounded-btn bg-fg px-3 text-[12px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-60"
+      >
+        {connecting ? "Connecting..." : "Connect wallet"}
+      </button>
+    );
   }
 
   if (!account) {
