@@ -14,7 +14,7 @@ const usd = (v: bigint) => `$${(Number(v) / 1e6).toFixed(2)}`;
  * $1.00 each, then withdraws the cash.
  */
 export function Withdraw() {
-  const { account, connect, ensureChain, walletClient } = useWallet();
+  const { account, connect, ensureChain, walletClient, walletName } = useWallet();
   const signedIn = useSession();
   const [raw, setRaw] = useState({ cash: 0n, yes: 0n, no: 0n });
   const [busy, setBusy] = useState(false);
@@ -96,7 +96,7 @@ export function Withdraw() {
           address: BOOK_ADDRESS, abi: BOOK_ABI, functionName: "withdraw", args: [credited], chain, account,
         });
         await publicClient.waitForTransactionReceipt({ hash: h });
-        setNote(`${usd(credited)} is in your wallet.`);
+        setNote(`${usd(credited)} is in ${walletName ?? "your wallet"}.`);
       } else {
         setNote("Nothing left to withdraw.");
       }
@@ -118,8 +118,8 @@ export function Withdraw() {
       <h2 className="text-[13px] font-semibold text-fg">Withdraw</h2>
 
       <p className="mt-1.5 text-[12px] leading-relaxed text-muted">
-        <span className="num text-fg">{account ? usd(total) : "n/a"}</span> can come back to your
-        wallet.
+        <span className="num text-fg">{account ? usd(total) : "n/a"}</span> can come back to{" "}
+        {walletName ?? "your wallet"}.
       </p>
 
       <button

@@ -23,6 +23,8 @@ type WalletCtx = {
   wrongChain: boolean;
   connecting: boolean;
   wallets: Announced[];
+  /** "MetaMask", "Coinbase Wallet", "WalletConnect"… as the wallet names itself. */
+  walletName: string | null;
   connect: (target?: Announced) => Promise<void>;
   connectWalletConnect: () => Promise<void>;
   disconnect: () => void;
@@ -34,6 +36,8 @@ type WalletCtx = {
 const Ctx = createContext<WalletCtx | null>(null);
 
 let activeProvider: Eip1193 | null = null;
+/** Module-level so it survives re-renders and the reconnect effect. */
+let activeName: string | null = null;
 
 /** The wallet the user picked, or the legacy injected one. */
 function provider(): Eip1193 | null {
@@ -52,6 +56,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [hasProvider, setHasProvider] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [wallets, setWallets] = useState<Announced[]>([]);
+  const [walletName, setWalletName] = useState<string | null>(null);
   const [connectError, setConnectError] = useState("");
   const inFlight = useRef(false);
 
@@ -83,12 +88,23 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("eip6963:announceProvider", onAnnounce);
   }, []);
 
+  // A reconnect on page load never calls connect(), so match the live provider
+  // against the announcements to keep naming the wallet correctly.
+  useEffect(() => {
+    if (!account || walletName || wallets.length === 0) return;
+    const eth = provider();
+    const match = wallets.find((w) => w.provider === eth) ?? (wallets.length === 1 ? wallets[0] : null);
+    if (match) setWalletName(match.name);
+  }, [account, wallets, walletName]);
+
   useEffect(() => {
     if (signedIn !== true) {
       // Signed out: drop whatever was attached. Nothing may read a wallet
       // address until there is a session that owns it.
       setAccount(null);
       setChainId(null);
+      setWalletName(null);
+      activeName = null;
       return;
     }
     const eth = provider();
@@ -151,6 +167,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         if (cancelled || !accs || accs.length === 0 || !accs[0]) return;
         activeProvider = wc as unknown as Eip1193;
         setAccount(accs[0] as Address);
+        activeName = "WalletConnect";
+        setWalletName(activeName);
         const chainHex = (await wc.request({ method: "eth_chainId" })) as string;
         setChainId(Number.parseInt(chainHex, 16));
       } catch {
@@ -195,6 +213,10 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       setAccount((accs[0] as Address) ?? null);
+      // Name the wallet in the UI instead of saying "wallet": EIP-6963 tells us,
+      // and an unnamed legacy provider still gets something honest.
+      activeName = target?.name ?? wallets.find((w) => w.provider === eth)?.name ?? "Browser wallet";
+      setWalletName(activeName);
       const id = (await eth.request({ method: "eth_chainId" })) as string;
       setChainId(Number.parseInt(id, 16));
     } catch (err) {
@@ -254,6 +276,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       }
       activeProvider = wc as unknown as Eip1193;
       setAccount(first as Address);
+      activeName = "WalletConnect";
+      setWalletName(activeName);
       const chainHex = (await wc.request({ method: "eth_chainId" })) as string;
       setChainId(Number.parseInt(chainHex, 16));
       const eip = wc as unknown as Eip1193;
@@ -322,6 +346,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       wrongChain: account !== null && chainId !== null && chainId !== CHAIN_ID_PUBLIC,
       connecting,
       wallets,
+      walletName,
       connect,
       connectWalletConnect,
       disconnect,
@@ -329,7 +354,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       walletClient,
       connectError,
     }),
-    [account, chainId, hasProvider, connecting, wallets, connect, connectWalletConnect, disconnect, ensureChain, walletClient, connectError],
+    [account, chainId, hasProvider, connecting, wallets, walletName, connect, connectWalletConnect, disconnect, ensureChain, walletClient, connectError],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -413,7 +438,7 @@ export function ConnectWallet({ block = false }: { block?: boolean }) {
             block ? "flex h-11 w-full items-center justify-center text-[13px]" : "h-8 text-[12px]"
           }`}
         >
-          {connecting ? "Connecting…" : "Connect wallet"}
+          {connecting ? "Connecting…" : wallets.length === 1 ? `Connect ${wallets[0].name}` : "Connect wallet"}
         </button>
 
         {open && mounted

@@ -50,7 +50,7 @@ function Empty() {
 }
 
 export function OrderBookLive() {
-  const { account, ensureChain, walletClient } = useWallet();
+  const { account, ensureChain, walletClient, walletName } = useWallet();
   const { setPick, version, bump } = useTradeState();
   const { book: state, failed } = useOrderBook(account);
   const [outcome, setOutcome] = useState<boolean>(true);
@@ -90,7 +90,7 @@ export function OrderBookLive() {
     const wc = walletClient();
     if (!wc) return;
     setCanceling(id);
-    setNote("Confirm the cancel in your wallet…");
+    setNote(`Confirm the cancel in ${walletName ?? "your wallet"}…`);
     try {
       const hash = await wc.writeContract({
         address: BOOK_ADDRESS,

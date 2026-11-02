@@ -67,7 +67,7 @@ export function TradePanel({
   mid?: number;
   anchor?: boolean;
 }) {
-  const { account, connect, ensureChain, walletClient, connectError } = useWallet();
+  const { account, connect, ensureChain, walletClient, connectError, walletName } = useWallet();
   const router = useRouter();
   const { pick, bump, version, sideRequest } = useTradeState();
 
@@ -215,7 +215,7 @@ export function TradePanel({
     })) as bigint;
 
     if (allowance < amt) {
-      setStatus("Approve USDC in your wallet…");
+      setStatus(`Approve USDC in ${walletName ?? "your wallet"}…`);
       const h = await w.writeContract({
         address: USDC_ADDRESS,
         abi: ERC20_ABI,
