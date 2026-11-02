@@ -80,3 +80,62 @@ export async function countSessions(userId: string): Promise<number> {
     .catch(() => ({ rows: [{ n: 0 }] }));
   return (rows[0]?.n as number) ?? 0;
 }
+export type SessionRow = {
+  sid: string;
+  userAgent: string | null;
+  ip: string | null;
+  createdAt: string;
+  lastSeen: string;
+  current: boolean;
+};
+
+/** Stable public id of the session making this request. */
+export async function currentSid(req: Request): Promise<string | null> {
+  const token = readToken(req);
+  if (!token) return null;
+  const pool = getPool();
+  if (!pool) return null;
+  const { rows } = await pool
+    .query(`select sid from sessions where token_hash = $1`, [hashToken(token)])
+    .catch(() => ({ rows: [] as { sid: string }[] }));
+  return (rows[0]?.sid as string) ?? null;
+}
+
+export async function listSessions(userId: string, sid: string | null): Promise<SessionRow[]> {
+  const pool = getPool();
+  if (!pool) return [];
+  const { rows } = await pool
+    .query(
+      `select sid, user_agent, ip, created_at, last_seen
+         from sessions where user_id = $1
+        order by last_seen desc limit 25`,
+      [userId],
+    )
+    .catch(() => ({ rows: [] as Record<string, unknown>[] }));
+  return rows.map((r) => ({
+    sid: String(r.sid),
+    userAgent: (r.user_agent as string | null) ?? null,
+    ip: (r.ip as string | null) ?? null,
+    createdAt: (r.created_at as Date).toISOString(),
+    lastSeen: (r.last_seen as Date).toISOString(),
+    current: sid !== null && String(r.sid) === sid,
+  }));
+}
+
+export async function revokeSession(userId: string, sid: string): Promise<void> {
+  const pool = getPool();
+  if (!pool) return;
+  await pool.query(`delete from sessions where user_id = $1 and sid = $2`, [userId, sid]).catch(() => {});
+}
+
+export async function revokeOtherSessions(userId: string, sid: string | null): Promise<void> {
+  const pool = getPool();
+  if (!pool) return;
+  if (sid === null) {
+    await destroyAllSessions(userId);
+    return;
+  }
+  await pool
+    .query(`delete from sessions where user_id = $1 and sid <> $2`, [userId, sid])
+    .catch(() => {});
+}

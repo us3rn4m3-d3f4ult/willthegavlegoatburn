@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AbstractAvatar } from "@/components/AbstractAvatar";
 import { RecoveryCodes } from "@/components/RecoveryCodes";
+import { SessionList } from "@/components/SessionList";
 import { Withdraw } from "@/components/Withdraw";
 
 type Me = {
@@ -183,16 +184,17 @@ export function AccountView() {
   return (
     <div className="space-y-4">
       <section className="panel p-5">
-        <h2 className="text-[13px] font-semibold text-fg">Session</h2>
+        <h2 className="text-[13px] font-semibold text-fg">Sessions</h2>
         <p className="mt-1.5 text-[12px] leading-relaxed text-muted">
           Signing out ends this browser&apos;s session only. A connected wallet stays connected, and
           other devices stay signed in.
         </p>
+        <SessionList />
         <button
           onClick={onSignOut}
           className="mt-3 h-9 rounded-btn border border-line px-4 text-[12.5px] text-fg transition-colors hover:border-line2 hover:bg-surface2"
         >
-          Sign out
+          Sign out this device
         </button>
       </section>
 
