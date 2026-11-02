@@ -9,7 +9,7 @@ const DECIMALS = 1_000_000; // USDC on Base
 
 /** Pull free USDC out of the market contract and back into the wallet. */
 export function Withdraw() {
-  const { account, ensureChain, walletClient } = useWallet();
+  const { account, connect, ensureChain, walletClient } = useWallet();
   const [amount, setAmount] = useState(0);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
@@ -72,8 +72,14 @@ export function Withdraw() {
 
       <button
         type="button"
-        onClick={withdraw}
-        disabled={busy || !account || amount <= 0}
+        onClick={() => {
+          if (!account) {
+            void connect();
+            return;
+          }
+          void withdraw();
+        }}
+        disabled={busy || (Boolean(account) && amount <= 0)}
         className="mt-3 h-9 rounded-btn bg-fg px-4 text-[12.5px] font-semibold text-black transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
       >
         {busy ? "Withdrawing…" : account ? `Withdraw ${amount.toFixed(2)} USDC` : "Connect a wallet"}

@@ -29,7 +29,7 @@ export function RecoveryCodes({
 
   return (
     <div>
-      <div className="rounded-card border border-yes/30 bg-yes/[0.04] p-4">
+      <div className="rounded-card border border-line/30 bg-yes/[0.04] p-4">
         <p className="text-[12.5px] font-semibold text-fg">Save these recovery codes now</p>
         <p className="mt-1 text-[11.5px] leading-relaxed text-muted">
           They are the only way back into your account — there is no password-reset

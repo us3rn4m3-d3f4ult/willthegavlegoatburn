@@ -88,11 +88,7 @@ export function SessionList() {
   }
 
   if (rows === null) return <p className="mt-2 text-[12px] text-dim">Loading devices…</p>;
-  if (rows.length === 0) return <p className="mt-2 text-[12px] text-dim">No active sessions.</p>;
-
-  const others = rows.filter((r) => !r.current).length;
-
-  return (
+  if (rows.length === 0) return <p className="mt-2 text-[12px] text-dim">No active sessions.</p>;return (
     <div className="mt-3">
       <ul className="divide-y divide-line border-y border-line">
         {rows.map((r) => (
@@ -123,17 +119,6 @@ export function SessionList() {
           </li>
         ))}
       </ul>
-
-      {others > 0 ? (
-        <button
-          type="button"
-          onClick={revokeOthers}
-          disabled={busy === "others"}
-          className="mt-3 h-8 border border-line px-3 text-[11.5px] text-muted transition-colors hover:border-line2 hover:text-fg disabled:opacity-40"
-        >
-          Sign out everywhere else
-        </button>
-      ) : null}
 
       {note ? <p className="mt-2 text-[11.5px] text-dim">{note}</p> : null}
     </div>
