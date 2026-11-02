@@ -196,13 +196,21 @@ export function AccountView() {
             · {me.sessions} active session{me.sessions === 1 ? "" : "s"}
           </p>
         </div>
+      </div>
+
+      <section className="panel p-5">
+        <h2 className="text-[13px] font-semibold text-fg">Session</h2>
+        <p className="mt-1.5 text-[12px] leading-relaxed text-muted">
+          Signing out ends this browser&apos;s session only. A connected wallet stays connected, and
+          other devices stay signed in.
+        </p>
         <button
           onClick={onSignOut}
-          className="h-8 shrink-0 rounded-btn border border-line px-3 text-[12px] text-muted transition-colors hover:border-line2 hover:text-fg"
+          className="mt-3 h-9 rounded-btn border border-line px-4 text-[12.5px] text-fg transition-colors hover:border-line2 hover:bg-surface2"
         >
           Sign out
         </button>
-      </div>
+      </section>
 
       <Withdraw />
 

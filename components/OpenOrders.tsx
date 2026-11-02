@@ -3,10 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { BOOK_ABI, BOOK_ADDRESS, BOOK_CONFIGURED, chain, publicClient } from "@/lib/web3";
 import { useWallet } from "@/components/WalletProvider";
+import { useSession } from "@/components/useSession";
 import type { Level } from "@/lib/book";
 
 export function OpenOrders() {
   const { account, ensureChain, walletClient } = useWallet();
+  const signedIn = useSession();
   const [orders, setOrders] = useState<Level[] | null>(null);
   const [busy, setBusy] = useState<number | null>(null);
   const [note, setNote] = useState("");
@@ -62,7 +64,11 @@ export function OpenOrders() {
       </header>
 
       {!account ? (
-        <p className="px-4 py-5 text-[12.5px] text-muted">Connect a wallet to see your orders.</p>
+        <p className="px-4 py-5 text-[12.5px] text-muted">
+          {signedIn === true
+            ? "Signed in — connect a wallet on this device to see its orders. On a phone, use the MetaMask or Coinbase Wallet in-app browser."
+            : "Connect a wallet to see your orders."}
+        </p>
       ) : orders && orders.length === 0 ? (
         <p className="px-4 py-5 text-[12.5px] text-muted">No open orders.</p>
       ) : (

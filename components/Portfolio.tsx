@@ -10,6 +10,7 @@ import {
   publicClient,
 } from "@/lib/web3";
 import { useWallet } from "@/components/WalletProvider";
+import { useSession } from "@/components/useSession";
 
 type Snap = {
   wallet: number;
@@ -26,6 +27,7 @@ const usd = (n: number) =>
 
 export function Portfolio() {
   const { account } = useWallet();
+  const signedIn = useSession();
   const [snap, setSnap] = useState<Snap | null>(null);
   const [price, setPrice] = useState<number | null>(null);
   const [failed, setFailed] = useState(false);
@@ -90,9 +92,21 @@ export function Portfolio() {
     return (
       <section className="panel p-4">
         <h2 className="panel-title">Your money</h2>
-        <p className="mt-2 text-[12.5px] leading-relaxed text-muted">
-          Create an account, then connect a wallet, to see your balance and positions.
-        </p>
+        {signedIn === true ? (
+          <div className="mt-2 space-y-1.5 text-[12.5px] leading-relaxed text-muted">
+            <p>You are signed in, but no wallet is connected on this device.</p>
+            <p className="text-dim">
+              A wallet only exists inside a browser that has one. On a phone, open this site
+              inside the MetaMask or Coinbase Wallet app browser; on a desktop, install the
+              extension. Your funds are on the blockchain and belong to the wallet, not to this
+              account.
+            </p>
+          </div>
+        ) : (
+          <p className="mt-2 text-[12.5px] leading-relaxed text-muted">
+            Sign in, then connect a wallet, to see your balance and positions.
+          </p>
+        )}
       </section>
     );
   }
