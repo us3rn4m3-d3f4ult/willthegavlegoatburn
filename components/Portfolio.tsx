@@ -14,19 +14,15 @@ import { useSession } from "@/components/useSession";
 import { useOrderBook } from "@/components/useOrderBook";
 import { WalletDeepLinks } from "@/components/WalletDeepLinks";
 
-type Snap = {
-  wallet: number;
-  inMarket: number;
-  yes: number;
-  no: number;
-  lockedYes: number;
-  lockedNo: number;
-  orders: number;
-};
+type Snap = { wallet: number; cash: number; yes: number; no: number };
 
 const usd = (n: number) =>
   `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+/**
+ * One number: everything the wallet owns, wherever it happens to be sitting.
+ * The breakdown lives in the withdraw panel, which is the only place it matters.
+ */
 export function Portfolio() {
   const { account } = useWallet();
   const signedIn = useSession();
@@ -55,34 +51,29 @@ export function Portfolio() {
     };
   }, [signedIn]);
 
-  // No session, no address — the money panel is for the signed-in owner only.
   const addr = signedIn === true ? (account ?? linked) : null;
+
+  // Hooks run unconditionally, before any early return: `addr` arrives after
+  // mount when the wallet reconnects, and a conditional hook crashes the page.
+  const { book } = useOrderBook(addr);
 
   const load = useCallback(async () => {
     if (!addr || !BOOK_CONFIGURED) return;
     try {
-      // One multicall instead of seven round trips: this runs every 20s per tab.
-      const [wallet, inMarket, yes, no, lYes, lNo, orders] = (await publicClient.multicall({
+      const [wallet, cash, yes, no] = (await publicClient.multicall({
         contracts: [
           { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "balanceOf", args: [addr] },
           { address: BOOK_ADDRESS, abi: BOOK_ABI, functionName: "usdcBalance", args: [addr] },
           { address: BOOK_ADDRESS, abi: BOOK_ABI, functionName: "yesBalance", args: [addr] },
           { address: BOOK_ADDRESS, abi: BOOK_ABI, functionName: "noBalance", args: [addr] },
-          { address: BOOK_ADDRESS, abi: BOOK_ABI, functionName: "lockedYes", args: [addr] },
-          { address: BOOK_ADDRESS, abi: BOOK_ABI, functionName: "lockedNo", args: [addr] },
-          { address: BOOK_ADDRESS, abi: BOOK_ABI, functionName: "openOrders", args: [addr] },
         ],
         allowFailure: false,
       })) as bigint[];
-
       setSnap({
         wallet: Number(wallet) / 1e6,
-        inMarket: Number(inMarket) / 1e6,
+        cash: Number(cash) / 1e6,
         yes: Number(yes) / 1e6,
         no: Number(no) / 1e6,
-        lockedYes: Number(lYes) / 1e6,
-        lockedNo: Number(lNo) / 1e6,
-        orders: Number(orders),
       });
       setFailed(false);
     } catch {
@@ -108,35 +99,22 @@ export function Portfolio() {
       .catch(() => {});
   }, []);
 
-  // Hooks must run in the same order on every render: this one is called before
-  // the early returns below, because `addr` arrives after mount when the wallet
-  // reconnects — calling it conditionally crashes the page.
-  const { book } = useOrderBook(addr);
-
   if (!BOOK_CONFIGURED) return null;
 
   if (!addr) {
     return (
       <section className="panel p-4">
         <h2 className="panel-title">Your money</h2>
-        {signedIn === null ? (
-          // Session check in flight: show neither balances nor a prompt, so a
-          // signed-in owner never sees "sign in" flash on their own page.
-          null
-        ) : signedIn ? (
+        {signedIn === null ? null : signedIn ? (
           <div className="mt-2 space-y-1.5 text-[12.5px] leading-relaxed text-muted">
             <p>You are signed in, but no wallet is connected on this device.</p>
-            <p className="text-dim">
-              Your funds are on the blockchain and belong to the wallet, not to this account. On
-              a desktop, install the browser extension instead.
-            </p>
             <div className="pt-1">
               <WalletDeepLinks />
             </div>
           </div>
         ) : (
           <p className="mt-2 text-[12.5px] leading-relaxed text-muted">
-            Sign in, then connect a wallet, to see your balance and positions.
+            Sign in, then connect a wallet, to see your balance.
           </p>
         )}
       </section>
@@ -144,32 +122,12 @@ export function Portfolio() {
   }
 
   const p = price ?? 0.5;
-  const mine = book?.mine ?? [];
-  // A resting bid has already left the available balance: the contract holds
-  // that USDC until the order fills or is cancelled. Without it the total
-  // silently under-reports by whatever is committed to open orders.
-  const bids = mine.filter((o) => o.isAsk === false);
-  const lockedUsdc = bids.reduce((sum, o) => sum + o.price * o.shares, 0);
-  const yesValue = (snap?.yes ?? 0) * p;
-  const noValue = (snap?.no ?? 0) * (1 - p);
-
-  // Three numbers, because that is all a trader needs: cash in the market
-  // (spend it or it is waiting in a buy order), shares (worth $1 each if they
-  // win), and USDC still in the wallet.
-  const cash = (snap?.inMarket ?? 0) + lockedUsdc;
-  const shares = yesValue + noValue;
-  const wallet = snap?.wallet ?? 0;
-  const total = cash + shares + wallet;
-
-  const row = (label: string, value: string, note: string) => (
-    <div key={label} className="flex items-baseline justify-between gap-4 px-4 py-2.5">
-      <div className="min-w-0">
-        <dt className="text-[13px] text-fg">{label}</dt>
-        <dd className="text-[11px] text-dim">{note}</dd>
-      </div>
-      <span className="num shrink-0 text-[13px] font-medium text-fg">{value}</span>
-    </div>
-  );
+  // Cash the contract holds, cash set aside by a resting buy order, and the
+  // shares valued at the current price.
+  const locked = (book?.mine ?? [])
+    .filter((o) => o.isAsk === false)
+    .reduce((sum, o) => sum + o.price * o.shares, 0);
+  const total = (snap?.wallet ?? 0) + (snap?.cash ?? 0) + locked + (snap?.yes ?? 0) * p + (snap?.no ?? 0) * (1 - p);
 
   return (
     <section className="panel">
@@ -177,25 +135,12 @@ export function Portfolio() {
         <h2 className="panel-title">Your money</h2>
       </header>
 
-      {!account && linked ? (
-        <p className="border-b border-line px-4 py-2 text-[11.5px] text-dim">
-          Read-only · <span className="num">{linked.slice(0, 6)}…{linked.slice(-4)}</span> is the wallet
-          linked to this account. Open the site in a wallet app to trade.
-        </p>
-      ) : null}
-
-      <div className="px-4 py-4 text-right">
-        <p className="num text-[30px] font-semibold leading-none tracking-[-0.02em] text-fg">
+      <div className="px-4 py-6 text-right">
+        <p className="num text-[32px] font-semibold leading-none tracking-[-0.02em] text-fg">
           {usd(total)}
         </p>
-        <p className="mt-1.5 text-[11px] text-dim">everything you have, in one number</p>
+        <p className="mt-2 text-[11px] text-dim">cash, shares and open orders together</p>
       </div>
-
-      <dl className="divide-y divide-line border-t border-line">
-        {row("Cash", usd(cash), "in the market")}
-        {row("Shares", usd(shares), `${(snap?.yes ?? 0).toFixed(0)} Yes + ${(snap?.no ?? 0).toFixed(0)} No`)}
-        {row("Wallet", usd(wallet), "not moved in")}
-      </dl>
 
       {failed ? (
         <p className="border-t border-line px-4 py-2 text-[11px] text-dim">
