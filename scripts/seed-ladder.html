@@ -384,6 +384,52 @@
         return out;
       }
 
+      /** Orders in `want` that are not already on the book, matched by side/price/size. */
+      function missing(want, have) {
+        const pool = [...have];
+        const out = [];
+        for (const w of want) {
+          const i = pool.findIndex(
+            (o) => o.isYes === w.isYes && o.isAsk === w.isAsk && o.price === w.price && o.shares === w.shares,
+          );
+          if (i >= 0) pool.splice(i, 1);
+          else out.push(w);
+        }
+        return { missing: out, extra: pool };
+      }
+
+      /**
+       * Places one order and waits for *that order* to appear. The old version
+       * watched the open-order count, which a retry could satisfy by accident and
+       * left duplicates behind.
+       */
+      async function place(o) {
+        const label = `${o.isAsk ? "sell" : "buy"} ${o.isYes ? "Yes" : "No"} ${sh(o.shares)} @ ${cents(o.price)}`;
+        log(`  ${label}…`);
+        const reminder = setTimeout(
+          () => warn("still waiting on your wallet — open the MetaMask window if it did not appear"),
+          20_000,
+        );
+        let hash;
+        try {
+          hash = await write(o.isAsk ? "placeAsk" : "placeBid", [o.isYes, o.shares, o.price, o.closesAt]);
+        } finally {
+          clearTimeout(reminder);
+        }
+        log(
+          `  <a href="https://basescan.org/tx/${hash}" target="_blank" rel="noreferrer">${hash.slice(0, 12)}…</a> sent — waiting for it to land`,
+        );
+        await until(
+          async () =>
+            (await mine()).some(
+              (x) =>
+                x.isYes === o.isYes && x.isAsk === o.isAsk && x.price === o.price && x.shares === o.shares,
+            ),
+          label,
+        );
+        ok(`${label} is on the book`);
+      }
+
       async function ladder() {
         const orders = await mine();
         if (orders.length === 0) { warn("no open orders found for this wallet"); return; }
@@ -429,21 +475,22 @@
               async () => (await freeNow(true)) >= wantYes && (await freeNow(false)) >= wantNo);
           }
 
-          let expected = await openNow();
-          for (const o of p.asks) {
-            expected += 1n;
-            const want = expected;
-            await send(`sell ${o.isYes ? "Yes" : "No"} ${sh(o.shares)} @ ${cents(o.price)}`,
-              () => write("placeAsk", [o.isYes, o.shares, o.price, s.closesAt]),
-              async () => (await openNow()) >= want);
+          const existing = await mine();
+          const askPlan = missing(p.asks.map((o) => ({ ...o, isAsk: true })), existing.filter((o) => o.isAsk));
+          const bidPlan = missing(p.bids.map((o) => ({ ...o, isAsk: false })), existing.filter((o) => !o.isAsk));
+          const extra = [...askPlan.extra, ...bidPlan.extra];
+          if (extra.length > 0) {
+            err(
+              `${extra.length} open ${extra.length === 1 ? "order is" : "orders are"} not part of this ladder (a duplicate at ${cents(extra[0].price)}). Press Unwind everything, then seed again.`,
+            );
+            return;
           }
-          for (const o of p.bids) {
-            expected += 1n;
-            const want = expected;
-            await send(`buy ${o.isYes ? "Yes" : "No"} ${sh(o.shares)} @ ${cents(o.price)}`,
-              () => write("placeBid", [o.isYes, o.shares, o.price, s.closesAt]),
-              async () => (await openNow()) >= want);
+          const todo = [...askPlan.missing, ...bidPlan.missing];
+          if (todo.length < p.asks.length + p.bids.length) {
+            warn(`${p.asks.length + p.bids.length - todo.length} orders are already on the book — placing the remaining ${todo.length}`);
           }
+
+          for (const o of todo) await place({ ...o, closesAt: s.closesAt });
 
           ok("ladder placed — reload the site to see it");
           await ladder();

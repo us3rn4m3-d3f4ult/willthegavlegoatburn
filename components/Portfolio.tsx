@@ -164,7 +164,7 @@ export function Portfolio() {
   const row = (label: string, value: string, note: string) => (
     <div key={label} className="flex items-baseline justify-between gap-4 px-4 py-2.5">
       <div className="min-w-0">
-        <dt className="text-[12.5px] text-muted">{label}</dt>
+        <dt className="text-[13px] text-fg">{label}</dt>
         <dd className="text-[11px] text-dim">{note}</dd>
       </div>
       <span className="num shrink-0 text-[13px] font-medium text-fg">{value}</span>
@@ -192,13 +192,9 @@ export function Portfolio() {
       </div>
 
       <dl className="divide-y divide-line border-t border-line">
-        {row("Cash", usd(cash), "money in the market")}
-        {row(
-          "Shares",
-          usd(shares),
-          `${(snap?.yes ?? 0).toFixed(0)} Yes + ${(snap?.no ?? 0).toFixed(0)} No, $1 each if they win`,
-        )}
-        {row("Wallet", usd(wallet), "USDC still outside the market")}
+        {row("Cash", usd(cash), "in the market")}
+        {row("Shares", usd(shares), `${(snap?.yes ?? 0).toFixed(0)} Yes + ${(snap?.no ?? 0).toFixed(0)} No`)}
+        {row("Wallet", usd(wallet), "not moved in")}
       </dl>
 
       {failed ? (
