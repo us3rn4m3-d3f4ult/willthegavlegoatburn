@@ -17,7 +17,11 @@ export function ChunkGuard() {
     const reloadOnce = () => {
       if (sessionStorage.getItem("chunk-reload") === "1") return;
       sessionStorage.setItem("chunk-reload", "1");
-      window.location.reload();
+      // A plain reload can be served straight from the disk cache and fail again.
+      // Changing the query string forces a network fetch of the document itself.
+      const url = new URL(window.location.href);
+      url.searchParams.set("_r", String(Date.now()));
+      window.location.replace(url.toString());
     };
 
     const isChunkFailure = (text: string) =>
