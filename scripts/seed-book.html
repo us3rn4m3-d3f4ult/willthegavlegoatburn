@@ -55,7 +55,7 @@
         <div class="grid">
           <div>
             <label for="rpc">RPC URL</label>
-            <input id="rpc" value="https://mainnet.base.org" spellcheck="false" />
+            <input id="rpc" value="https://base-rpc.publicnode.com" spellcheck="false" />
           </div>
           <div>
             <label for="market">Market contract</label>
@@ -63,7 +63,10 @@
           </div>
         </div>
         <div class="row"><button id="connect">Connect MetaMask</button></div>
-        <p class="hint">Chain 8453 (Base). The public RPC is fine for a handful of calls.</p>
+        <p class="hint">
+          Chain 8453 (Base). <code>mainnet.base.org</code> rate-limits hard and can leave waits
+          hanging — publicnode is the default, and you can paste any RPC you trust.
+        </p>
       </fieldset>
 
       <fieldset>
@@ -95,7 +98,7 @@
           </div>
         </div>
         <div class="row">
-          <button id="check">Check (no transactions)</button>
+          <button id="check" disabled>Check (no transactions)</button>
           <button id="seed" class="primary" disabled>Seed the book</button>
           <button id="unwind" class="danger" disabled>Unwind everything</button>
         </div>
@@ -161,7 +164,7 @@
       const logEl = $("log");
       const usd = (v) => `$${Number(formatUnits(v, 6)).toFixed(2)}`;
       const sh = (v) => `${Number(formatUnits(v, 6)).toFixed(0)} shares`;
-      const cents = (v) => `${(Number(v) * 100).toFixed(1)}¢`;
+      const cents = (v) => `${(Number(formatUnits(v, 18)) * 100).toFixed(1)}¢`;
 
       const log = (html) => {
         logEl.innerHTML += html + "\n";
@@ -202,6 +205,7 @@
           await wallet.switchChain({ id: CHAIN_ID });
         }
         ok(`connected ${me.slice(0, 6)}…${me.slice(-4)} on Base`);
+        $("check").disabled = false;
         $("seed").disabled = false;
         $("unwind").disabled = false;
         await check();
@@ -210,19 +214,20 @@
       const read = (fn, args) => pub.readContract({ address: market(), abi: BOOK_ABI, functionName: fn, args });
 
       async function state() {
-        const [trading, closesAt, minShares, walletUsdc, allowance, credited, freeYes, freeNo, open] =
+        const [trading, closesAt, minShares, walletUsdc, eth, allowance, credited, freeYes, freeNo, open] =
           await Promise.all([
             read("isTrading"),
             read("bettingClosesAt"),
             read("MIN_ORDER_SHARES"),
             pub.readContract({ address: USDC, abi: ERC20_ABI, functionName: "balanceOf", args: [me] }),
+            pub.getBalance({ address: me }),
             pub.readContract({ address: USDC, abi: ERC20_ABI, functionName: "allowance", args: [me, market()] }),
             read("usdcBalance", [me]),
             read("freeShares", [me, true]),
             read("freeShares", [me, false]),
             read("openOrders", [me]),
           ]);
-        return { trading, closesAt, minShares, walletUsdc, allowance, credited, freeYes, freeNo, open };
+        return { trading, closesAt, minShares, walletUsdc, eth, allowance, credited, freeYes, freeNo, open };
       }
 
       function plan(s) {
@@ -239,17 +244,28 @@
       }
 
       async function check() {
+        if (!pub || !me) {
+          warn("connect your wallet first");
+          return null;
+        }
         const s = await state();
         const p = plan(s);
         log(`— state — trading ${s.trading} · closes ${new Date(Number(s.closesAt) * 1000).toISOString()}`);
         log(`wallet ${usd(s.walletUsdc)} · credited ${usd(s.credited)} · free Yes ${usd(s.freeYes)} / No ${usd(s.freeNo)} · open orders ${s.open}/32`);
+        log(`gas ${Number(formatUnits(s.eth, 18)).toFixed(5)} ETH`);
+        if (s.eth === 0n) err("no ETH on Base — every transaction below needs a few cents of gas");
+        else if (s.eth < 100_000_000_000_000n) warn("ETH is very low — top up if a transaction fails");
 
-        if (!s.trading) err("market is not trading — seeding would revert");
-        if (s.open + 4n > 32n) err("too many open orders — cancel some first");
-        if (p.askPrice <= p.bidPrice) err("ask must be above the bid");
-        if (p.askSh < s.minShares || p.bidSh < s.minShares) err("size below the market minimum");
-        if (p.split > 0n && p.split < p.askSh) err("split is smaller than the ask size");
-        if (p.topUp > s.walletUsdc) err(`wallet is short ${usd(p.topUp - s.walletUsdc)} for the deposit`);
+        let problems = 0;
+        const bad = (m) => { problems += 1; err(m); };
+
+        if (!s.trading) bad("market is not trading — seeding would revert");
+        if (s.open + 4n > 32n) bad("too many open orders — cancel some first");
+        if (p.askPrice <= p.bidPrice) bad("ask must be above the bid");
+        if (p.askSh < s.minShares || p.bidSh < s.minShares) bad("size below the market minimum");
+        if (p.split > 0n && p.split < p.askSh) bad("split is smaller than the ask size");
+        if (p.topUp > s.walletUsdc) bad(`wallet is short ${usd(p.topUp - s.walletUsdc)} for the deposit`);
+        if (p.bidCost > s.credited + p.topUp - p.split) bad(`bids need ${usd(p.bidCost)} but only ${usd(s.credited + p.topUp - p.split)} would be credited`);
 
         log("— would do —");
         if (p.topUp > s.allowance) log(`  approve ${usd(p.topUp)} USDC`);
@@ -257,15 +273,57 @@
         if (p.needSplit > 0n) log(`  split ${usd(p.needSplit)} -> Yes + No`);
         log(`  ask Yes and No, ${sh(p.askSh)} each @ ${cents(p.askPrice)}`);
         log(`  bid Yes and No, ${sh(p.bidSh)} each @ ${cents(p.bidPrice)} (${usd(p.bidCost)} escrowed)`);
-        return { s, p };
+        return { s, p, problems };
       }
 
 
-      async function send(label, write) {
+      const allowanceNow = () =>
+        pub.readContract({ address: USDC, abi: ERC20_ABI, functionName: "allowance", args: [me, market()] });
+      const creditedNow = () => read("usdcBalance", [me]);
+      const freeNow = (isYes) => read("freeShares", [me, isYes]);
+      const openNow = () => read("openOrders", [me]);
+
+      /**
+       * Polls the chain until `done()` is true. Deliberately does not wait on
+       * receipts: public Base RPCs stall on receipt polling and MetaMask already
+       * told us the hash. The state either changed or it did not.
+       */
+      async function until(done, label, timeoutMs = 180_000) {
+        const started = Date.now();
+        for (;;) {
+          try {
+            if (await done()) return;
+          } catch {
+            /* transient RPC error — keep polling */
+          }
+          if (Date.now() - started > timeoutMs) {
+            throw new Error(
+              `${label} has not confirmed after ${Math.round(timeoutMs / 1000)}s. It may still land — check Basescan before retrying (re-running this page resumes where it stopped).`,
+            );
+          }
+          await new Promise((r) => setTimeout(r, 2_500));
+        }
+      }
+
+      async function send(label, call, done) {
         log(`  ${label}…`);
-        const hash = await write();
-        await pub.waitForTransactionReceipt({ hash });
-        log(`  <a href="https://basescan.org/tx/${hash}" target="_blank" rel="noreferrer">${hash.slice(0, 12)}…</a>`);
+        // A wallet prompt can sit unseen behind the browser window; say so rather
+        // than looking frozen.
+        const reminder = setTimeout(
+          () => warn("still waiting on your wallet — open the MetaMask window if it did not appear"),
+          20_000,
+        );
+        let hash;
+        try {
+          hash = await call(); // the wallet prompt happens here
+        } finally {
+          clearTimeout(reminder);
+        }
+        log(
+          `  <a href="https://basescan.org/tx/${hash}" target="_blank" rel="noreferrer">${hash.slice(0, 12)}…</a> sent — waiting for it to land`,
+        );
+        await until(done, label);
+        ok(`${label} confirmed`);
         return hash;
       }
 
@@ -301,28 +359,48 @@
       async function seed() {
         $("seed").disabled = true;
         try {
-          const { s, p } = await check();
+          const res = await check();
+          if (!res) return;
+          if (res.problems > 0) { err("fix the problems above, then run it again"); return; }
+          const { s, p } = res;
           if (!s.trading) return;
 
           if (p.topUp > 0n) {
             if (p.topUp > s.allowance) {
-              log(`  approve ${usd(p.topUp)} USDC…`);
-              const h = await wallet.writeContract({
-                address: USDC, abi: ERC20_ABI, functionName: "approve",
-                args: [market(), p.topUp], account: me, chain: wallet.chain,
-              });
-              await pub.waitForTransactionReceipt({ hash: h });
+              await send(
+                `approve ${usd(p.topUp)} USDC`,
+                () =>
+                  wallet.writeContract({
+                    address: USDC, abi: ERC20_ABI, functionName: "approve",
+                    args: [market(), p.topUp], account: me, chain: wallet.chain,
+                  }),
+                async () => (await allowanceNow()) >= p.topUp,
+              );
             }
-            await send(`deposit ${usd(p.topUp)}`, () => write("deposit", [p.topUp]));
+            const target = s.credited + p.topUp;
+            await send(`deposit ${usd(p.topUp)} USDC`, () => write("deposit", [p.topUp]),
+              async () => (await creditedNow()) >= target);
           }
 
-          if (p.needSplit > 0n) await send(`split ${usd(p.needSplit)}`, () => write("split", [p.needSplit]));
+          if (p.needSplit > 0n) {
+            await send(`split ${usd(p.needSplit)}`, () => write("split", [p.needSplit]),
+              async () => (await freeNow(true)) >= p.askSh && (await freeNow(false)) >= p.askSh);
+          }
 
+          let expected = await openNow();
           for (const isYes of [true, false]) {
-            await send(`ask ${isYes ? "Yes" : "No"}`, () => write("placeAsk", [isYes, p.askSh, p.askPrice, s.closesAt]));
+            expected += 1n;
+            const want = expected;
+            await send(`ask ${isYes ? "Yes" : "No"} ${sh(p.askSh)} @ ${cents(p.askPrice)}`,
+              () => write("placeAsk", [isYes, p.askSh, p.askPrice, s.closesAt]),
+              async () => (await openNow()) >= want);
           }
           for (const isYes of [true, false]) {
-            await send(`bid ${isYes ? "Yes" : "No"}`, () => write("placeBid", [isYes, p.bidSh, p.bidPrice, s.closesAt]));
+            expected += 1n;
+            const want = expected;
+            await send(`bid ${isYes ? "Yes" : "No"} ${sh(p.bidSh)} @ ${cents(p.bidPrice)}`,
+              () => write("placeBid", [isYes, p.bidSh, p.bidPrice, s.closesAt]),
+              async () => (await openNow()) >= want);
           }
 
           ok("seeded — reload the site to see the ladder");
@@ -338,14 +416,28 @@
         if (!confirm("Cancel every open order, merge the pairs back to USDC and withdraw it all?")) return;
         $("unwind").disabled = true;
         try {
-          for (const o of await mine()) await send(`cancel #${o.id}`, () => write("cancelOrder", [o.id]));
+          for (;;) {
+            const list = await mine();
+            if (list.length === 0) break;
+            const o = list[0];
+            const target = (await openNow()) - 1n;
+            await send(`cancel #${o.id}`, () => write("cancelOrder", [o.id]),
+              async () => (await openNow()) <= target);
+          }
 
-          const s = await state();
-          const pairs = s.freeYes < s.freeNo ? s.freeYes : s.freeNo;
-          if (pairs > 0n) await send(`merge ${usd(pairs)}`, () => write("merge", [pairs]));
+          const free = { yes: await freeNow(true), no: await freeNow(false) };
+          const pairs = free.yes < free.no ? free.yes : free.no;
+          if (pairs > 0n) {
+            const before = await creditedNow();
+            await send(`merge ${usd(pairs)}`, () => write("merge", [pairs]),
+              async () => (await creditedNow()) >= before + pairs);
+          }
 
-          const after = await state();
-          if (after.credited > 0n) await send(`withdraw ${usd(after.credited)}`, () => write("withdraw", [after.credited]));
+          const credited = await creditedNow();
+          if (credited > 0n) {
+            await send(`withdraw ${usd(credited)}`, () => write("withdraw", [credited]),
+              async () => (await creditedNow()) < credited);
+          }
 
           ok("unwound — the capital is back in your wallet, minus gas");
         } catch (e) {
