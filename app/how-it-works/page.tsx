@@ -11,7 +11,7 @@ const STEPS = [
   {
     n: "01",
     title: "Get a wallet",
-    body: "Install MetaMask or Coinbase Wallet. You need USDC on Base — that is the money you trade with — and a few cents of ETH on Base for the transaction fee.",
+    body: "Install MetaMask or Coinbase Wallet. You need USDC on Base — that is the money you trade with — Network fees are covered by us, so you need no ETH.",
   },
   {
     n: "02",

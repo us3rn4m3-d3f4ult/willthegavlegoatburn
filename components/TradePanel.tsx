@@ -739,7 +739,7 @@ export function TradePanel({
             <span className="num text-muted">0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913</span>
           </p>
           <p>Anything sent on another chain, or in another token, is unrecoverable.</p>
-          <p>Keep a little ETH on Base for gas.</p>
+          <p>Network fees are covered by the project. You need no ETH.</p>
         </div>
       </details>
 

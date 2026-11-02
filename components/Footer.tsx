@@ -19,7 +19,7 @@ export function Footer() {
           <div>
             <p className="text-[13px] font-medium text-fg">willthegavlegoatburn</p>
             <p className="mt-2 max-w-[36ch] text-[12.5px] leading-relaxed text-muted">
-              Non-custodial prediction market on the Gävle goat. Base, USDC, no protocol fees.
+              Non-custodial prediction market on the Gävle goat. Base, USDC. No protocol fees, and we cover the network fee.
             </p>
             <a
               href={SITE.repo}

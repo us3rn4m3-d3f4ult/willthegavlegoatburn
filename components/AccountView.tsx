@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AbstractAvatar } from "@/components/AbstractAvatar";
 import { RecoveryCodes } from "@/components/RecoveryCodes";
-import { WalletLink } from "@/components/WalletLink";
 import { Withdraw } from "@/components/Withdraw";
 
 type Me = {
@@ -183,22 +182,6 @@ export function AccountView() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4 panel p-5">
-        <AbstractAvatar seed={me.user.email} size={48} />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[14px] font-medium text-fg">{me.user.email}</p>
-          <p className="mt-0.5 text-[11.5px] text-dim">
-            Joined{" "}
-            {new Date(me.user.createdAt).toLocaleDateString("en-GB", {
-              day: "numeric",
-              month: "short",
-              year: "numeric",
-            })}{" "}
-            · {me.sessions} active session{me.sessions === 1 ? "" : "s"}
-          </p>
-        </div>
-      </div>
-
       <section className="panel p-5">
         <h2 className="text-[13px] font-semibold text-fg">Session</h2>
         <p className="mt-1.5 text-[12px] leading-relaxed text-muted">
@@ -212,8 +195,6 @@ export function AccountView() {
           Sign out
         </button>
       </section>
-
-      <WalletLink />
 
       <Withdraw />
 

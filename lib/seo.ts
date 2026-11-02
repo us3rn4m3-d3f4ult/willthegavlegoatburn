@@ -47,7 +47,7 @@ export const FAQ: FaqItem[] = [
   },
   {
     q: "What fees are there?",
-    a: "No protocol fee, no rake, no cut of any payout. You pay only the network fee for your own transactions on Base, directly to the blockchain.",
+    a: "No protocol fee, no rake, no cut of any payout. We cover the network fee for your trades — capped monthly — so you never need to hold ETH.",
   },
 ];
 

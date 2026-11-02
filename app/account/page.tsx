@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { AccountIdentity } from "@/components/AccountIdentity";
 import { AccountView } from "@/components/AccountView";
+import { Withdraw } from "@/components/Withdraw";
 import { Portfolio } from "@/components/Portfolio";
 import { OpenOrders } from "@/components/OpenOrders";
 
@@ -18,8 +20,10 @@ export default function AccountPage() {
       </p>
 
       <div className="mt-6 space-y-4">
+        <AccountIdentity />
         <Portfolio />
         <OpenOrders />
+        <Withdraw />
         <AccountView />
       </div>
     </div>
