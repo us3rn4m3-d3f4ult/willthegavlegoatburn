@@ -108,6 +108,11 @@ export function Portfolio() {
       .catch(() => {});
   }, []);
 
+  // Hooks must run in the same order on every render: this one is called before
+  // the early returns below, because `addr` arrives after mount when the wallet
+  // reconnects — calling it conditionally crashes the page.
+  const { book } = useOrderBook(addr);
+
   if (!BOOK_CONFIGURED) return null;
 
   if (!addr) {
@@ -137,8 +142,6 @@ export function Portfolio() {
       </section>
     );
   }
-
-  const { book } = useOrderBook(addr);
 
   const p = price ?? 0.5;
   const mine = book?.mine ?? [];
