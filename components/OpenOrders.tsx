@@ -17,6 +17,8 @@ export function OpenOrders() {
   const orders = signedIn === true ? book?.mine ?? null : null;
 
   const value = (o: { price: number; shares: number }) => o.price * o.shares;
+  const buys = (orders ?? []).filter((o) => o.isAsk === false).length;
+  const sells = (orders ?? []).length - buys;
 
   async function cancel(id: number) {
     if (!account || !(await ensureChain())) return;
@@ -50,7 +52,9 @@ export function OpenOrders() {
       <header className="panel-head">
         <h2 className="panel-title">Open orders</h2>
         <span className="num text-[11.5px] text-dim">
-          {signedIn !== true || !account || orders === null ? "—" : orders.length}
+          {signedIn !== true || !account || orders === null
+            ? "—"
+            : `${buys} buy · ${sells} sell`}
         </span>
       </header>
 
@@ -92,8 +96,8 @@ export function OpenOrders() {
 
       {orders && orders.length > 0 ? (
         <p className="border-t border-line px-4 py-2 text-[11px] leading-relaxed text-dim">
-          A buy order holds your cash until it fills or you close it. A sell order is shares you have
-          offered — it pays you cash if someone buys.
+          A buy order sets aside cash (part of your Cash above). A sell order sets aside shares.
+          Close an order to get it back.
         </p>
       ) : null}
 

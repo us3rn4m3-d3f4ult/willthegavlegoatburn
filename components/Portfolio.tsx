@@ -158,20 +158,15 @@ export function Portfolio() {
   const wallet = snap?.wallet ?? 0;
   const total = cash + shares + wallet;
 
-  const cashNote =
-    bids.length > 0
-      ? `${usd(snap?.inMarket ?? 0)} ready to spend + ${usd(lockedUsdc)} held by ${bids.length} buy ${
-          bids.length === 1 ? "order" : "orders"
-        }`
-      : "ready to spend";
+  const cashNote = "money in the market";
 
   const row = (label: string, value: string, note: string) => (
-    <div key={label} className="flex items-baseline justify-between gap-4 px-4 py-3">
-      <div>
-        <dt className="text-[13px] text-fg">{label}</dt>
-        <dd className="mt-0.5 text-[11px] leading-relaxed text-dim">{note}</dd>
+    <div key={label} className="flex items-baseline justify-between gap-4 px-4 py-2.5">
+      <div className="min-w-0">
+        <dt className="text-[12.5px] text-muted">{label}</dt>
+        <dd className="text-[11px] text-dim">{note}</dd>
       </div>
-      <span className="num shrink-0 text-[15px] font-medium text-fg">{value}</span>
+      <span className="num shrink-0 text-[13px] font-medium text-fg">{value}</span>
     </div>
   );
 
@@ -179,7 +174,6 @@ export function Portfolio() {
     <section className="panel">
       <header className="panel-head">
         <h2 className="panel-title">Your money</h2>
-        <span className="num text-[13px] font-medium text-fg">{usd(total)}</span>
       </header>
 
       {!account && linked ? (
@@ -189,14 +183,21 @@ export function Portfolio() {
         </p>
       ) : null}
 
-      <dl className="divide-y divide-line">
+      <div className="px-4 py-4">
+        <p className="num text-[30px] font-semibold leading-none tracking-[-0.02em] text-fg">
+          {usd(total)}
+        </p>
+        <p className="mt-1.5 text-[11px] text-dim">everything you have, in one number</p>
+      </div>
+
+      <dl className="divide-y divide-line border-t border-line">
         {row("Cash", usd(cash), cashNote)}
         {row(
           "Shares",
           usd(shares),
-          `${(snap?.yes ?? 0).toFixed(0)} Yes + ${(snap?.no ?? 0).toFixed(0)} No — each pays $1.00 if it wins`,
+          `${(snap?.yes ?? 0).toFixed(0)} Yes + ${(snap?.no ?? 0).toFixed(0)} No`,
         )}
-        {row("In your wallet", usd(wallet), "USDC not moved into the market yet")}
+        {row("Wallet", usd(wallet), "not in the market")}
       </dl>
 
       {failed ? (
