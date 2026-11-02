@@ -24,7 +24,7 @@ const usd = (n: number) =>
  * The breakdown lives in the withdraw panel, which is the only place it matters.
  */
 export function Portfolio() {
-  const { account } = useWallet();
+  const { account, walletName } = useWallet();
   const signedIn = useSession();
   const [snap, setSnap] = useState<Snap | null>(null);
   const [price, setPrice] = useState<number | null>(null);
@@ -128,6 +128,21 @@ export function Portfolio() {
     .filter((o) => o.isAsk === false)
     .reduce((sum, o) => sum + o.price * o.shares, 0);
   const total = (snap?.wallet ?? 0) + (snap?.cash ?? 0) + locked + (snap?.yes ?? 0) * p + (snap?.no ?? 0) * (1 - p);
+  const yes = snap?.yes ?? 0;
+  const no = snap?.no ?? 0;
+  const cash = (snap?.cash ?? 0) + locked;
+  const shares = yes * p + no * (1 - p);
+  const whole = (n: number) => Number(n.toFixed(2)).toString();
+
+  const row = (label: string, value: string, note: string) => (
+    <div key={label} className="flex items-baseline justify-between gap-4 px-4 py-3">
+      <div className="min-w-0">
+        <dt className="text-[13px] text-fg">{label}</dt>
+        <dd className="mt-0.5 text-[11px] leading-relaxed text-dim">{note}</dd>
+      </div>
+      <span className="num shrink-0 text-[13px] font-medium text-fg">{value}</span>
+    </div>
+  );
 
   return (
     <section className="panel">
@@ -139,8 +154,21 @@ export function Portfolio() {
         <p className="num text-[32px] font-semibold leading-none tracking-[-0.02em] text-fg">
           {usd(total)}
         </p>
-        <p className="mt-2 text-[11px] text-dim">cash, shares and open orders together</p>
+        <p className="mt-2 text-[11px] text-dim">everything you own here</p>
       </div>
+
+      <dl className="divide-y divide-line border-t border-line">
+        {row("Cash", usd(cash), "money you keep on this site")}
+        {row("Shares", usd(shares), `${whole(yes)} Yes + ${whole(no)} No`)}
+        {row("Wallet", usd(snap?.wallet ?? 0), `your own money, in ${walletName ?? "your wallet"}`)}
+      </dl>
+
+      <p className="border-t border-line px-4 py-3 text-[11px] leading-relaxed text-dim">
+        A share is one bet, and pays <span className="text-muted">$1.00</span> if it is right: 1{" "}
+        <span className="text-yes">Yes</span> pays $1.00 if the goat burns, 1{" "}
+        <span className="text-no">No</span> pays $1.00 if it does not. One of them always pays, so a
+        Yes and a No together are always worth $1.00.
+      </p>
 
       {failed ? (
         <p className="border-t border-line px-4 py-2 text-[11px] text-dim">
