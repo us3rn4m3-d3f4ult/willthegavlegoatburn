@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AbstractAvatar } from "@/components/AbstractAvatar";
 import { RecoveryCodes } from "@/components/RecoveryCodes";
+import { WalletLink } from "@/components/WalletLink";
 import { Withdraw } from "@/components/Withdraw";
 
 type Me = {
@@ -211,6 +212,8 @@ export function AccountView() {
           Sign out
         </button>
       </section>
+
+      <WalletLink />
 
       <Withdraw />
 

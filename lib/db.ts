@@ -24,6 +24,12 @@ create table if not exists users (
 alter table users add column if not exists username text;
 create unique index if not exists users_username_lower_idx on users (lower(username));
 
+-- A wallet address the account has proved it owns (personal_sign). Public data,
+-- stored so positions can be shown read-only on devices without a wallet. No key
+-- material ever exists server-side.
+alter table users add column if not exists wallet_address text;
+create index if not exists users_wallet_address_idx on users (lower(wallet_address));
+
 -- Positions are mirrored from the chain by the indexer. Until that exists every
 -- row here is zero, which is the truthful answer: nobody holds shares yet.
 create table if not exists positions (

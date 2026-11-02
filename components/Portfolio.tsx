@@ -32,16 +32,27 @@ export function Portfolio() {
   const [snap, setSnap] = useState<Snap | null>(null);
   const [price, setPrice] = useState<number | null>(null);
   const [failed, setFailed] = useState(false);
+  const [linked, setLinked] = useState<`0x${string}` | null>(null);
+
+  // The phone has no wallet, but the account knows which address to read.
+  useEffect(() => {
+    fetch(`/api/auth/me`, { cache: `no-store` })
+      .then((r) => r.json() as Promise<{ wallet?: string | null }>)
+      .then((d) => setLinked((d.wallet as `0x${string}` | null) ?? null))
+      .catch(() => {});
+  }, []);
+
+  const addr = account ?? linked;
 
   const load = useCallback(async () => {
-    if (!account || !BOOK_CONFIGURED) return;
+    if (!addr || !BOOK_CONFIGURED) return;
     try {
       const read = <T,>(fn: "usdcBalance" | "yesBalance" | "noBalance" | "lockedYes" | "lockedNo" | "openOrders") =>
         publicClient.readContract({
           address: BOOK_ADDRESS,
           abi: BOOK_ABI,
           functionName: fn,
-          args: [account],
+          args: [addr],
         }) as Promise<bigint>;
 
       const [wallet, inMarket, yes, no, lYes, lNo, orders] = await Promise.all([
@@ -49,7 +60,7 @@ export function Portfolio() {
           address: USDC_ADDRESS,
           abi: ERC20_ABI,
           functionName: "balanceOf",
-          args: [account],
+          args: [addr],
         }) as Promise<bigint>,
         read("usdcBalance"),
         read("yesBalance"),
@@ -72,7 +83,7 @@ export function Portfolio() {
     } catch {
       setFailed(true);
     }
-  }, [account]);
+  }, [addr]);
 
   useEffect(() => {
     void load();
@@ -89,7 +100,7 @@ export function Portfolio() {
 
   if (!BOOK_CONFIGURED) return null;
 
-  if (!account) {
+  if (!addr) {
     return (
       <section className="panel p-4">
         <h2 className="panel-title">Your money</h2>
@@ -130,6 +141,13 @@ export function Portfolio() {
       <header className="panel-head">
         <h2 className="panel-title">Your money</h2>
       </header>
+
+      {!account && linked ? (
+        <p className="border-b border-line px-4 py-2 text-[11.5px] text-dim">
+          Read-only · <span className="num">{linked.slice(0, 6)}…{linked.slice(-4)}</span> is the wallet
+          linked to this account. Open the site in a wallet app to trade.
+        </p>
+      ) : null}
 
       <div className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-3">
         {tile("In wallet", usd(snap?.wallet ?? 0))}
