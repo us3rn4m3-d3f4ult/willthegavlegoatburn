@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 
 const SAMPLE_MS = 55_000; // at most one stored point per minute
 const MAX_ORDERS = 200; // matches the /api/orders cap
+const LOOKBACK = 5_000n; // ~2.8 hours of Base blocks
 
 const FILLED_EVENT = parseAbiItem(
   "event OrderFilled(uint256 indexed id, address indexed taker, uint256 shares, uint256 usdcAmount)",
@@ -63,56 +64,32 @@ async function readBook(): Promise<Level[]> {
   return out;
 }
 
-export async function GET() {
-  if (!BOOK_CONFIGURED) return json({ configured: false });
+/**
+ * Catching up on fills means hundreds of 10-block eth_getLogs calls (Alchemy's
+ * free-tier cap). Running that inside a page request made volume and traders take
+ * tens of seconds to appear, so it happens in the background: the response always
+ * comes from what is already in Postgres and the scan catches up behind it.
+ * Guarded so concurrent page loads start one scan, not ten.
+ */
+let scanning = false;
 
-  let price = 0.5;
-  let liquidity = 0;
+async function scanFills(): Promise<void> {
+  if (scanning) return;
+  if (!(await dbReady())) return;
+  const pool = getPool();
+  if (!pool) return;
+
+  scanning = true;
   try {
-    const levels = await readBook();
-
-    // Both outcomes describe the same market, so NO orders have to be mirrored:
-    // a NO bid at p is a YES ask at 1-p, and a NO ask at p is a YES bid at 1-p.
-    // Ignoring that made a book with equal YES and NO bids read as 10% instead of 50%.
-    const bidCandidates = [
-      ...levels.filter((l) => l.isYes && !l.isAsk).map((l) => l.price),
-      ...levels.filter((l) => !l.isYes && l.isAsk).map((l) => 1 - l.price),
-    ];
-    const askCandidates = [
-      ...levels.filter((l) => l.isYes && l.isAsk).map((l) => l.price),
-      ...levels.filter((l) => !l.isYes && !l.isAsk).map((l) => 1 - l.price),
-    ];
-
-    const bestBid = bidCandidates.length > 0 ? Math.max(...bidCandidates) : undefined;
-    const bestAsk = askCandidates.length > 0 ? Math.min(...askCandidates) : undefined;
-
-    if (bestAsk !== undefined && bestBid !== undefined) price = (bestAsk + bestBid) / 2;
-    else if (bestAsk !== undefined) price = bestAsk;
-    else if (bestBid !== undefined) price = bestBid;
-
-    liquidity = levels.reduce((s, l) => s + l.shares * l.price, 0);
-  } catch {
-    return json({ configured: true, error: "rpc_unavailable" }, 503);
-  }
-
-  // Fills: walk forward in 10-block chunks (Alchemy free tier limit), store each
-  // OrderFilled row, then total from the table. One scan powers the volume,
-  // the trader count and the trade feed.
-  let volume: number | null = null;
-  let traders: number | null = null;
-  try {
-    const pool = (await dbReady()) ? getPool() : null;
     const latest = await publicClient.getBlockNumber();
 
-    let lastBlock = 0n;
-    if (pool) {
-      await pool.query(`insert into fills (id) values (1) on conflict (id) do nothing`);
-      const { rows } = await pool.query(`select last_block from fills where id = 1`);
-      lastBlock = BigInt(rows[0]?.last_block ?? 0);
-    }
+    await pool.query(`insert into fills (id) values (1) on conflict (id) do nothing`);
+    const { rows } = await pool.query(`select last_block from fills where id = 1`);
+    const lastBlock = BigInt(rows[0]?.last_block ?? 0);
 
-    const floor = latest > 5_000n ? latest - 5_000n : 0n;
+    const floor = latest > LOOKBACK ? latest - LOOKBACK : 0n;
     const from = lastBlock > 0n && lastBlock > floor ? lastBlock + 1n : floor;
+    if (from > latest) return;
 
     const CHUNK = 10n;
     const CONCURRENCY = 8;
@@ -163,65 +140,112 @@ export async function GET() {
       }
     }
 
-    if (pool) {
-      for (const r of found) {
-        await pool
-          .query(
-            `insert into trades (block, log_index, order_id, taker, shares, usdc)
-             values ($1, $2, $3, $4, $5, $6) on conflict (block, log_index) do nothing`,
-            r,
-          )
-          .catch(() => {});
-        await pool
-          .query(`insert into participants (address) values ($1) on conflict do nothing`, [r[3]])
-          .catch(() => {});
-      }
-      for (const m of makers) {
-        await pool
-          .query(`insert into participants (address) values ($1) on conflict do nothing`, [m])
-          .catch(() => {});
-      }
+    for (const r of found) {
       await pool
-        .query(`update fills set last_block = $1, updated_at = now() where id = 1`, [
-          latest.toString(),
-        ])
+        .query(
+          `insert into trades (block, log_index, order_id, taker, shares, usdc)
+           values ($1, $2, $3, $4, $5, $6) on conflict (block, log_index) do nothing`,
+          r,
+        )
         .catch(() => {});
-
-      const vol = await pool
-        .query(`select coalesce(sum(usdc), 0)::text as volume from trades`)
-        .catch(() => ({ rows: [] as { volume: string }[] }));
-      const people = await pool
-        .query(`select count(*)::int as n from participants`)
-        .catch(() => ({ rows: [] as { n: number }[] }));
-      volume = Number(vol.rows[0]?.volume ?? 0);
-      traders = Number(people.rows[0]?.n ?? 0);
-    } else {
-      volume = 0;
-      traders = 0;
+      await pool
+        .query(`insert into participants (address) values ($1) on conflict do nothing`, [r[3]])
+        .catch(() => {});
     }
+    for (const m of makers) {
+      await pool
+        .query(`insert into participants (address) values ($1) on conflict do nothing`, [m])
+        .catch(() => {});
+    }
+    await pool
+      .query(`update fills set last_block = $1, updated_at = now() where id = 1`, [latest.toString()])
+      .catch(() => {});
   } catch {
-    volume = null;
-    traders = null;
+    // A failed scan leaves the cursor where it was; the next request retries.
+  } finally {
+    scanning = false;
+  }
+}
+
+/** Two aggregates, no RPC. Null only when the database itself is unreachable. */
+async function readTotals(): Promise<{ volume: number; traders: number } | null> {
+  if (!(await dbReady())) return null;
+  const pool = getPool();
+  if (!pool) return null;
+
+  const vol = await pool
+    .query(`select coalesce(sum(usdc), 0)::text as volume from trades`)
+    .catch(() => null);
+  const people = await pool.query(`select count(*)::int as n from participants`).catch(() => null);
+  if (!vol || !people) return null;
+
+  return { volume: Number(vol.rows[0]?.volume ?? 0), traders: Number(people.rows[0]?.n ?? 0) };
+}
+
+export async function GET() {
+  if (!BOOK_CONFIGURED) return json({ configured: false });
+
+  let price = 0.5;
+  let liquidity = 0;
+  try {
+    const levels = await readBook();
+
+    // Both outcomes describe the same market, so NO orders have to be mirrored:
+    // a NO bid at p is a YES ask at 1-p, and a NO ask at p is a YES bid at 1-p.
+    const bidCandidates = [
+      ...levels.filter((l) => l.isYes && !l.isAsk).map((l) => l.price),
+      ...levels.filter((l) => !l.isYes && l.isAsk).map((l) => 1 - l.price),
+    ];
+    const askCandidates = [
+      ...levels.filter((l) => l.isYes && l.isAsk).map((l) => l.price),
+      ...levels.filter((l) => !l.isYes && !l.isAsk).map((l) => 1 - l.price),
+    ];
+
+    const bestBid = bidCandidates.length > 0 ? Math.max(...bidCandidates) : undefined;
+    const bestAsk = askCandidates.length > 0 ? Math.min(...askCandidates) : undefined;
+
+    if (bestAsk !== undefined && bestBid !== undefined) price = (bestAsk + bestBid) / 2;
+    else if (bestAsk !== undefined) price = bestAsk;
+    else if (bestBid !== undefined) price = bestBid;
+
+    liquidity = levels.reduce((s, l) => s + l.shares * l.price, 0);
+  } catch {
+    return json({ configured: true, error: "rpc_unavailable" }, 503);
   }
 
-  // Price series, sampled on read.
+  // Fire and forget: the response never waits for the blockchain scan.
+  void scanFills();
+
+  const totals = await readTotals();
+
+  // Price series, sampled on read from what is already stored.
   let series: { t: number; p: number }[] = [];
   if (await dbReady()) {
     const pool = getPool();
     if (pool) {
       const last = await pool
         .query(`select at from price_points order by at desc limit 1`)
-        .catch(() => ({ rows: [] as { at: Date }[] }));
-      const lastAt = last.rows[0]?.at ? new Date(last.rows[0].at).getTime() : 0;
+        .catch(() => null);
+      const lastAt = last?.rows[0]?.at ? new Date(last.rows[0].at as Date).getTime() : 0;
       if (Date.now() - lastAt > SAMPLE_MS) {
         await pool.query(`insert into price_points (price) values ($1)`, [price]).catch(() => {});
       }
       const rows = await pool
         .query(`select price, at from price_points order by at asc limit 2000`)
-        .catch(() => ({ rows: [] as { price: string; at: Date }[] }));
-      series = rows.rows.map((r) => ({ t: new Date(r.at).getTime(), p: Number(r.price) }));
+        .catch(() => null);
+      series = (rows?.rows ?? []).map((r: { price: string; at: Date }) => ({
+        t: new Date(r.at).getTime(),
+        p: Number(r.price),
+      }));
     }
   }
 
-  return json({ configured: true, price, liquidity, volume, traders, series });
+  return json({
+    configured: true,
+    price,
+    liquidity,
+    volume: totals ? totals.volume : null,
+    traders: totals ? totals.traders : null,
+    series,
+  });
 }

@@ -122,6 +122,40 @@ body {
   text-decoration-color: var(--color-muted);
 }
 
+/* Loading skeleton: a pale band travelling left to right. */
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.shimmer {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--color-surface2);
+  border-radius: 2px;
+}
+
+.shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--color-fg) 8%, transparent),
+    transparent
+  );
+  animation: shimmer 1.3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shimmer::after {
+    animation: none;
+  }
+}
+
 /* ────────────────────────────────────────────────────────────
    Primitives — every surface in the app is built from these four.
    ──────────────────────────────────────────────────────────── */
