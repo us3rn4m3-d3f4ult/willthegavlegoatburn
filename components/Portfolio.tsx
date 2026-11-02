@@ -149,16 +149,29 @@ export function Portfolio() {
   const lockedUsdc = bids.reduce((sum, o) => sum + o.price * o.shares, 0);
   const yesValue = (snap?.yes ?? 0) * p;
   const noValue = (snap?.no ?? 0) * (1 - p);
-  const total = yesValue + noValue + (snap?.inMarket ?? 0) + (snap?.wallet ?? 0) + lockedUsdc;
-  const lockedNote = `${bids.length} buy ${bids.length === 1 ? "order" : "orders"}`;
-  const shareNote = (count: number, locked: number) =>
-    `${count.toFixed(2)} shares${locked > 0 ? `, ${locked.toFixed(2)} on sale` : ""}`;
 
-  const tile = (label: string, value: string, note?: string) => (
-    <div key={label} className="border border-line px-3 py-2.5">
-      <p className="eyebrow">{label}</p>
-      <p className="num mt-1.5 text-[15px] font-medium text-fg">{value}</p>
-      {note ? <p className="num mt-0.5 text-[10.5px] text-dim">{note}</p> : null}
+  // Three numbers, because that is all a trader needs: cash in the market
+  // (spend it or it is waiting in a buy order), shares (worth $1 each if they
+  // win), and USDC still in the wallet.
+  const cash = (snap?.inMarket ?? 0) + lockedUsdc;
+  const shares = yesValue + noValue;
+  const wallet = snap?.wallet ?? 0;
+  const total = cash + shares + wallet;
+
+  const cashNote =
+    bids.length > 0
+      ? `${usd(snap?.inMarket ?? 0)} ready to spend + ${usd(lockedUsdc)} held by ${bids.length} buy ${
+          bids.length === 1 ? "order" : "orders"
+        }`
+      : "ready to spend";
+
+  const row = (label: string, value: string, note: string) => (
+    <div key={label} className="flex items-baseline justify-between gap-4 px-4 py-3">
+      <div>
+        <dt className="text-[13px] text-fg">{label}</dt>
+        <dd className="mt-0.5 text-[11px] leading-relaxed text-dim">{note}</dd>
+      </div>
+      <span className="num shrink-0 text-[15px] font-medium text-fg">{value}</span>
     </div>
   );
 
@@ -166,6 +179,7 @@ export function Portfolio() {
     <section className="panel">
       <header className="panel-head">
         <h2 className="panel-title">Your money</h2>
+        <span className="num text-[13px] font-medium text-fg">{usd(total)}</span>
       </header>
 
       {!account && linked ? (
@@ -175,29 +189,20 @@ export function Portfolio() {
         </p>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-3">
-        {tile("Ready to trade", usd(snap?.inMarket ?? 0), "USDC inside the market")}
-        {tile("In your wallet", usd(snap?.wallet ?? 0), "not deposited yet")}
-        {tile(
-          "Locked in orders",
-          usd(lockedUsdc),
-          lockedUsdc > 0 ? lockedNote : "nothing committed",
+      <dl className="divide-y divide-line">
+        {row("Cash", usd(cash), cashNote)}
+        {row(
+          "Shares",
+          usd(shares),
+          `${(snap?.yes ?? 0).toFixed(0)} Yes + ${(snap?.no ?? 0).toFixed(0)} No — each pays $1.00 if it wins`,
         )}
-        {tile("Total", usd(total), "all of it, at this price")}
-        {tile("Yes shares", usd(yesValue), shareNote(snap?.yes ?? 0, snap?.lockedYes ?? 0))}
-        {tile("No shares", usd(noValue), shareNote(snap?.no ?? 0, snap?.lockedNo ?? 0))}
-      </div>
-
-      <p className="border-t border-line px-4 py-2.5 text-[11px] leading-relaxed text-dim">
-        Your money is in one of three places, and Total counts all of them:
-        <span className="text-muted"> ready to trade</span> (USDC the market holds for you),
-        <span className="text-muted"> locked in orders</span> (a buy order holds its money until it
-        fills or you cancel), and
-        <span className="text-muted"> shares</span> (each is worth $1.00 if that side wins).
-      </p>
+        {row("In your wallet", usd(wallet), "USDC not moved into the market yet")}
+      </dl>
 
       {failed ? (
-        <p className="px-4 pb-2 text-[11px] text-dim">Balance read failed. Retrying on reload.</p>
+        <p className="border-t border-line px-4 py-2 text-[11px] text-dim">
+          Balance read failed. Retrying on reload.
+        </p>
       ) : null}
     </section>
   );
