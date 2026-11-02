@@ -103,6 +103,14 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // Pull the WalletConnect bundle down in the background: it is large, and
+  // downloading it on tap is what made mobile feel broken.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      void import("@walletconnect/ethereum-provider").catch(() => {});
+    }, 4000);
+    return () => clearTimeout(t);
+  }, []);
   const connect = useCallback(async (target?: Announced) => {
     // MetaMask refuses a second wallet_requestPermissions while one is pending
     // (error -32002), which looks like "nothing happens". Never stack them.
@@ -114,9 +122,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     const eth = (target?.provider ?? provider() ?? wallets[0]?.provider) as Eip1193 | null;
     if (!eth) {
       inFlight.current = false;
-      setConnectError(
-        "No wallet in this browser. On a phone, open the site inside MetaMask or Coinbase Wallet — both have a browser built in.",
-      );
+      // No injected wallet: hand off to WalletConnect, which works in any browser.
+      await connectWalletConnect();
       return;
     }
     setConnectError("");

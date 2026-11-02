@@ -96,7 +96,7 @@ export async function currentSid(req: Request): Promise<string | null> {
   const pool = getPool();
   if (!pool) return null;
   const { rows } = await pool
-    .query(`select sid from sessions where token_hash = $1`, [hashToken(token)])
+    .query(`select token_hash from sessions where token_hash = $1`, [hashToken(token)])
     .catch(() => ({ rows: [] as { sid: string }[] }));
   return (rows[0]?.sid as string) ?? null;
 }
@@ -106,26 +106,26 @@ export async function listSessions(userId: string, sid: string | null): Promise<
   if (!pool) return [];
   const { rows } = await pool
     .query(
-      `select sid, user_agent, ip, created_at, last_seen
+      `select token_hash, user_agent, ip, created_at, last_seen
          from sessions where user_id = $1
         order by last_seen desc limit 25`,
       [userId],
     )
     .catch(() => ({ rows: [] as Record<string, unknown>[] }));
   return rows.map((r) => ({
-    sid: String(r.sid),
+    sid: String(r.token_hash),
     userAgent: (r.user_agent as string | null) ?? null,
     ip: (r.ip as string | null) ?? null,
     createdAt: (r.created_at as Date).toISOString(),
     lastSeen: (r.last_seen as Date).toISOString(),
-    current: sid !== null && String(r.sid) === sid,
+    current: sid !== null && String(r.token_hash) === sid,
   }));
 }
 
 export async function revokeSession(userId: string, sid: string): Promise<void> {
   const pool = getPool();
   if (!pool) return;
-  await pool.query(`delete from sessions where user_id = $1 and sid = $2`, [userId, sid]).catch(() => {});
+  await pool.query(`delete from sessions where user_id = $1 and token_hash = $2`, [userId, sid]).catch(() => {});
 }
 
 export async function revokeOtherSessions(userId: string, sid: string | null): Promise<void> {
@@ -136,6 +136,6 @@ export async function revokeOtherSessions(userId: string, sid: string | null): P
     return;
   }
   await pool
-    .query(`delete from sessions where user_id = $1 and sid <> $2`, [userId, sid])
+    .query(`delete from sessions where user_id = $1 and token_hash <> $2`, [userId, sid])
     .catch(() => {});
 }

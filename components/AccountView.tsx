@@ -198,8 +198,6 @@ export function AccountView() {
         </button>
       </section>
 
-      <Withdraw />
-
       <section className="panel p-5">
         <h2 className="text-[13px] font-semibold text-fg">Change password</h2>
         <form onSubmit={onChangePassword} className="mt-3 space-y-2.5">
@@ -235,7 +233,7 @@ export function AccountView() {
       {error ? <p className="text-[12px] text-no">{error}</p> : null}
       {notice ? <p className="text-[12px] text-yes">{notice}</p> : null}
 
-      <section className="panel p-5">
+      <section className="panel border-no/25 p-5">
         <h2 className="text-[13px] font-semibold text-fg">Recovery codes</h2>
         <p className="mt-1.5 text-[12px] leading-relaxed text-muted">
           <span className="num font-medium text-fg">{me.recoveryRemaining ?? 0}</span> of 10

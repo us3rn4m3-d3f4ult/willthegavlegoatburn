@@ -11,7 +11,7 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const SID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const SID = /^[0-9a-f]{64}$/i;
 
 /** Every device signed in to this account, newest activity first. */
 export async function GET(req: Request) {
