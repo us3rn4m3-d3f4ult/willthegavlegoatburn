@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Seed the order book — willthegavlegoatburn</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; padding: 32px 20px 64px; background: #000; color: #fff;
+        font: 14px/1.55 ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+      }
+      main { max-width: 720px; margin: 0 auto; }
+      h1 { font-size: 20px; letter-spacing: -0.02em; margin: 0 0 6px; }
+      p.lede { color: #8a8a8a; font-size: 13px; margin: 0 0 24px; }
+      fieldset { border: 1px solid #262626; border-radius: 10px; padding: 16px; margin: 0 0 16px; }
+      legend { padding: 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #8a8a8a; }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      label { display: block; font-size: 12px; color: #a3a3a3; margin-bottom: 4px; }
+      input {
+        width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #333;
+        background: #0a0a0a; color: #fff; font: inherit; font-variant-numeric: tabular-nums;
+      }
+      input:focus { outline: 1px solid #4d7c0f; border-color: #4d7c0f; }
+      .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+      button {
+        padding: 10px 16px; border-radius: 8px; border: 1px solid #333; background: #141414;
+        color: #fff; font: inherit; font-weight: 600; cursor: pointer;
+      }
+      button:hover:not(:disabled) { border-color: #555; }
+      button.primary { background: #fff; color: #000; border-color: #fff; }
+      button.danger { border-color: #7f1d1d; color: #fca5a5; }
+      button:disabled { opacity: 0.4; cursor: not-allowed; }
+      #log {
+        margin-top: 18px; padding: 14px; border-radius: 10px; border: 1px solid #262626;
+        background: #060606; font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+        white-space: pre-wrap; word-break: break-word; min-height: 90px; color: #d4d4d4;
+      }
+      #log .ok { color: #86efac; } #log .warn { color: #fcd34d; } #log .err { color: #fca5a5; }
+      #log a { color: #93c5fd; }
+      .hint { font-size: 12px; color: #737373; margin: 10px 0 0; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Seed the order book</h1>
+      <p class="lede">
+        Runs in this browser only. Your wallet signs every transaction — no key is typed, stored or
+        sent anywhere. Close the tab when you are done.
+      </p>
+
+      <fieldset>
+        <legend>Connection</legend>
+        <div class="grid">
+          <div>
+            <label for="rpc">RPC URL</label>
+            <input id="rpc" value="https://mainnet.base.org" spellcheck="false" />
+          </div>
+          <div>
+            <label for="market">Market contract</label>
+            <input id="market" value="0xcfa25534fc14929e29bd1f4fefe5cd4d5ce9880f" spellcheck="false" />
+          </div>
+        </div>
+        <div class="row"><button id="connect">Connect MetaMask</button></div>
+        <p class="hint">Chain 8453 (Base). The public RPC is fine for a handful of calls.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>What to seed</legend>
+        <div class="grid">
+          <div>
+            <label for="deposit">Deposit into market (USDC)</label>
+            <input id="deposit" value="90" inputmode="decimal" />
+          </div>
+          <div>
+            <label for="split">Split into Yes + No (USDC)</label>
+            <input id="split" value="60" inputmode="decimal" />
+          </div>
+          <div>
+            <label for="askCents">Ask price (¢)</label>
+            <input id="askCents" value="52" inputmode="decimal" />
+          </div>
+          <div>
+            <label for="askShares">Ask size (shares per outcome)</label>
+            <input id="askShares" value="30" inputmode="decimal" />
+          </div>
+          <div>
+            <label for="bidCents">Bid price (¢)</label>
+            <input id="bidCents" value="47" inputmode="decimal" />
+          </div>
+          <div>
+            <label for="bidShares">Bid size (shares per outcome)</label>
+            <input id="bidShares" value="30" inputmode="decimal" />
+          </div>
+        </div>
+        <div class="row">
+          <button id="check">Check (no transactions)</button>
+          <button id="seed" class="primary" disabled>Seed the book</button>
+          <button id="unwind" class="danger" disabled>Unwind everything</button>
+        </div>
+        <p class="hint">
+          Orders expire at the market's betting-close time. Unwind cancels your open orders, merges
+          the pairs back to USDC and withdraws the lot — so a seed costs about 30 cents of gas, not
+          the capital.
+        </p>
+      </fieldset>
+
+      <div id="log">Ready.</div>
+    </main>
+    <script type="module">
+      import {
+        createPublicClient, createWalletClient, custom, defineChain, http, parseUnits, formatUnits,
+      } from "https://esm.sh/viem@2";
+
+      const CHAIN_ID = 8453;
+      const USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+      const SCALE = 10n ** 18n;
+      const PRICE_STEP = 10n ** 14n; // cents are entered with 2 decimals (52.5c -> 5250 steps)
+
+      const BOOK_ABI = [
+        { type: "function", name: "isTrading", stateMutability: "view", inputs: [], outputs: [{ type: "bool" }] },
+        { type: "function", name: "bettingClosesAt", stateMutability: "view", inputs: [], outputs: [{ type: "uint64" }] },
+        { type: "function", name: "MIN_ORDER_SHARES", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+        { type: "function", name: "nextOrderId", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+        { type: "function", name: "openOrders", stateMutability: "view", inputs: [{ type: "address" }], outputs: [{ type: "uint256" }] },
+        { type: "function", name: "usdcBalance", stateMutability: "view", inputs: [{ type: "address" }], outputs: [{ type: "uint256" }] },
+        { type: "function", name: "freeShares", stateMutability: "view", inputs: [{ type: "address" }, { type: "bool" }], outputs: [{ type: "uint256" }] },
+        {
+          type: "function", name: "orders", stateMutability: "view", inputs: [{ type: "uint256" }],
+          outputs: [
+            { name: "maker", type: "address" }, { name: "isYes", type: "bool" }, { name: "isAsk", type: "bool" },
+            { name: "active", type: "bool" }, { name: "expiresAt", type: "uint64" }, { name: "shares", type: "uint256" },
+            { name: "price", type: "uint256" }, { name: "escrow", type: "uint256" },
+          ],
+        },
+        { type: "function", name: "deposit", stateMutability: "nonpayable", inputs: [{ type: "uint256" }], outputs: [] },
+        { type: "function", name: "withdraw", stateMutability: "nonpayable", inputs: [{ type: "uint256" }], outputs: [] },
+        { type: "function", name: "split", stateMutability: "nonpayable", inputs: [{ type: "uint256" }], outputs: [] },
+        { type: "function", name: "merge", stateMutability: "nonpayable", inputs: [{ type: "uint256" }], outputs: [] },
+        { type: "function", name: "cancelOrder", stateMutability: "nonpayable", inputs: [{ type: "uint256" }], outputs: [] },
+        {
+          type: "function", name: "placeAsk", stateMutability: "nonpayable",
+          inputs: [{ type: "bool" }, { type: "uint256" }, { type: "uint256" }, { type: "uint64" }],
+          outputs: [{ type: "uint256" }],
+        },
+        {
+          type: "function", name: "placeBid", stateMutability: "nonpayable",
+          inputs: [{ type: "bool" }, { type: "uint256" }, { type: "uint256" }, { type: "uint64" }],
+          outputs: [{ type: "uint256" }],
+        },
+      ];
+
+      const ERC20_ABI = [
+        { type: "function", name: "allowance", stateMutability: "view", inputs: [{ type: "address" }, { type: "address" }], outputs: [{ type: "uint256" }] },
+        { type: "function", name: "balanceOf", stateMutability: "view", inputs: [{ type: "address" }], outputs: [{ type: "uint256" }] },
+        { type: "function", name: "approve", stateMutability: "nonpayable", inputs: [{ type: "address" }, { type: "uint256" }], outputs: [{ type: "bool" }] },
+      ];
+
+      const $ = (id) => document.getElementById(id);
+      const logEl = $("log");
+      const usd = (v) => `$${Number(formatUnits(v, 6)).toFixed(2)}`;
+      const sh = (v) => `${Number(formatUnits(v, 6)).toFixed(0)} shares`;
+      const cents = (v) => `${(Number(v) * 100).toFixed(1)}¢`;
+
+      const log = (html) => {
+        logEl.innerHTML += html + "\n";
+        logEl.scrollTop = logEl.scrollHeight;
+      };
+      const ok = (m) => log(`<span class="ok">ok</span> ${m}`);
+      const warn = (m) => log(`<span class="warn">!</span> ${m}`);
+      const err = (m) => log(`<span class="err">x</span> ${m}`);
+
+      let wallet = null;
+      let pub = null;
+      let me = null;
+
+      const market = () => $("market").value.trim();
+
+      function clients() {
+        if (!window.ethereum) throw new Error("No wallet found — install MetaMask or open this in its browser.");
+        const chain = defineChain({
+          id: CHAIN_ID,
+          name: "Base",
+          nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+          rpcUrls: { default: { http: [$("rpc").value.trim()] } },
+          blockExplorers: { default: { name: "Basescan", url: "https://basescan.org" } },
+        });
+        pub = createPublicClient({ chain, transport: http($("rpc").value.trim()) });
+        wallet = createWalletClient({ chain, transport: custom(window.ethereum) });
+        return chain;
+      }
+
+      async function connect() {
+        const chain = clients();
+        const [addr] = await wallet.requestAddresses();
+        me = addr;
+        try {
+          await wallet.switchChain({ id: CHAIN_ID });
+        } catch {
+          await wallet.addChain({ chain });
+          await wallet.switchChain({ id: CHAIN_ID });
+        }
+        ok(`connected ${me.slice(0, 6)}…${me.slice(-4)} on Base`);
+        $("seed").disabled = false;
+        $("unwind").disabled = false;
+        await check();
+      }
+
+      const read = (fn, args) => pub.readContract({ address: market(), abi: BOOK_ABI, functionName: fn, args });
+
+      async function state() {
+        const [trading, closesAt, minShares, walletUsdc, allowance, credited, freeYes, freeNo, open] =
+          await Promise.all([
+            read("isTrading"),
+            read("bettingClosesAt"),
+            read("MIN_ORDER_SHARES"),
+            pub.readContract({ address: USDC, abi: ERC20_ABI, functionName: "balanceOf", args: [me] }),
+            pub.readContract({ address: USDC, abi: ERC20_ABI, functionName: "allowance", args: [me, market()] }),
+            read("usdcBalance", [me]),
+            read("freeShares", [me, true]),
+            read("freeShares", [me, false]),
+            read("openOrders", [me]),
+          ]);
+        return { trading, closesAt, minShares, walletUsdc, allowance, credited, freeYes, freeNo, open };
+      }
+
+      function plan(s) {
+        const deposit = parseUnits($("deposit").value.trim() || "0", 6);
+        const split = parseUnits($("split").value.trim() || "0", 6);
+        const askPrice = BigInt(Math.round(Number($("askCents").value) * 100)) * PRICE_STEP;
+        const askSh = parseUnits($("askShares").value.trim() || "0", 6);
+        const bidPrice = BigInt(Math.round(Number($("bidCents").value) * 100)) * PRICE_STEP;
+        const bidSh = parseUnits($("bidShares").value.trim() || "0", 6);
+        const bidCost = ((bidSh * bidPrice) / SCALE) * 2n;
+        const needSplit = askSh > s.freeYes || askSh > s.freeNo ? askSh : 0n;
+        const topUp = deposit > s.credited ? deposit - s.credited : 0n;
+        return { deposit, split, askPrice, askSh, bidPrice, bidSh, bidCost, needSplit, topUp };
+      }
+
+      async function check() {
+        const s = await state();
+        const p = plan(s);
+        log(`— state — trading ${s.trading} · closes ${new Date(Number(s.closesAt) * 1000).toISOString()}`);
+        log(`wallet ${usd(s.walletUsdc)} · credited ${usd(s.credited)} · free Yes ${usd(s.freeYes)} / No ${usd(s.freeNo)} · open orders ${s.open}/32`);
+
+        if (!s.trading) err("market is not trading — seeding would revert");
+        if (s.open + 4n > 32n) err("too many open orders — cancel some first");
+        if (p.askPrice <= p.bidPrice) err("ask must be above the bid");
+        if (p.askSh < s.minShares || p.bidSh < s.minShares) err("size below the market minimum");
+        if (p.split > 0n && p.split < p.askSh) err("split is smaller than the ask size");
+        if (p.topUp > s.walletUsdc) err(`wallet is short ${usd(p.topUp - s.walletUsdc)} for the deposit`);
+
+        log("— would do —");
+        if (p.topUp > s.allowance) log(`  approve ${usd(p.topUp)} USDC`);
+        if (p.topUp > 0n) log(`  deposit ${usd(p.topUp)} USDC`);
+        if (p.needSplit > 0n) log(`  split ${usd(p.needSplit)} -> Yes + No`);
+        log(`  ask Yes and No, ${sh(p.askSh)} each @ ${cents(p.askPrice)}`);
+        log(`  bid Yes and No, ${sh(p.bidSh)} each @ ${cents(p.bidPrice)} (${usd(p.bidCost)} escrowed)`);
+        return { s, p };
+      }
+
+
+      async function send(label, write) {
+        log(`  ${label}…`);
+        const hash = await write();
+        await pub.waitForTransactionReceipt({ hash });
+        log(`  <a href="https://basescan.org/tx/${hash}" target="_blank" rel="noreferrer">${hash.slice(0, 12)}…</a>`);
+        return hash;
+      }
+
+      const write = (functionName, args) =>
+        wallet.writeContract({ address: market(), abi: BOOK_ABI, functionName, args, account: me, chain: wallet.chain });
+
+      async function mine() {
+        const n = await read("nextOrderId");
+        const out = [];
+        for (let i = 0n; i < n; i++) {
+          // orders(id) decodes positionally:
+          // [maker, isYes, isAsk, active, expiresAt, shares, price, escrow]
+          const o = await read("orders", [i]);
+          if (o[3] && o[0].toLowerCase() === me.toLowerCase()) {
+            out.push({ id: i, isYes: o[1], isAsk: o[2], shares: o[5], price: o[6] });
+          }
+        }
+        return out;
+      }
+
+      async function ladder() {
+        const orders = await mine();
+        if (orders.length === 0) { warn("no open orders found for this wallet"); return; }
+        log("— your open orders —");
+        for (const o of orders) {
+          log(`  #${o.id} ${o.isAsk ? "ask" : "bid"} ${o.isYes ? "Yes" : "No"} ${sh(o.shares)} @ ${cents(o.price)}`);
+        }
+        const asks = orders.filter((o) => o.isAsk).sort((a, b) => (a.price < b.price ? -1 : 1));
+        const bids = orders.filter((o) => !o.isAsk).sort((a, b) => (a.price > b.price ? -1 : 1));
+        if (asks[0] && bids[0]) ok(`visible spread: ${cents(bids[0].price)} bid / ${cents(asks[0].price)} ask`);
+      }
+
+      async function seed() {
+        $("seed").disabled = true;
+        try {
+          const { s, p } = await check();
+          if (!s.trading) return;
+
+          if (p.topUp > 0n) {
+            if (p.topUp > s.allowance) {
+              log(`  approve ${usd(p.topUp)} USDC…`);
+              const h = await wallet.writeContract({
+                address: USDC, abi: ERC20_ABI, functionName: "approve",
+                args: [market(), p.topUp], account: me, chain: wallet.chain,
+              });
+              await pub.waitForTransactionReceipt({ hash: h });
+            }
+            await send(`deposit ${usd(p.topUp)}`, () => write("deposit", [p.topUp]));
+          }
+
+          if (p.needSplit > 0n) await send(`split ${usd(p.needSplit)}`, () => write("split", [p.needSplit]));
+
+          for (const isYes of [true, false]) {
+            await send(`ask ${isYes ? "Yes" : "No"}`, () => write("placeAsk", [isYes, p.askSh, p.askPrice, s.closesAt]));
+          }
+          for (const isYes of [true, false]) {
+            await send(`bid ${isYes ? "Yes" : "No"}`, () => write("placeBid", [isYes, p.bidSh, p.bidPrice, s.closesAt]));
+          }
+
+          ok("seeded — reload the site to see the ladder");
+          await ladder();
+        } catch (e) {
+          err(e.shortMessage ?? e.message ?? String(e));
+        } finally {
+          $("seed").disabled = false;
+        }
+      }
+
+      async function unwind() {
+        if (!confirm("Cancel every open order, merge the pairs back to USDC and withdraw it all?")) return;
+        $("unwind").disabled = true;
+        try {
+          for (const o of await mine()) await send(`cancel #${o.id}`, () => write("cancelOrder", [o.id]));
+
+          const s = await state();
+          const pairs = s.freeYes < s.freeNo ? s.freeYes : s.freeNo;
+          if (pairs > 0n) await send(`merge ${usd(pairs)}`, () => write("merge", [pairs]));
+
+          const after = await state();
+          if (after.credited > 0n) await send(`withdraw ${usd(after.credited)}`, () => write("withdraw", [after.credited]));
+
+          ok("unwound — the capital is back in your wallet, minus gas");
+        } catch (e) {
+          err(e.shortMessage ?? e.message ?? String(e));
+        } finally {
+          $("unwind").disabled = false;
+        }
+      }
+
+      $("connect").onclick = () => connect().catch((e) => err(e.message ?? String(e)));
+      $("check").onclick = () => check().catch((e) => err(e.message ?? String(e)));
+      $("seed").onclick = seed;
+      $("unwind").onclick = unwind;
+
+    </script>
+
+  </body>
+</html>

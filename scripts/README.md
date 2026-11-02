@@ -13,6 +13,7 @@ Everything here is a plain script. The only third-party import is `paramiko`
 | `backup_db.sh` | nightly `pg_dump` into `/var/backups/gavle`, 14 kept, `gunzip -t` verified. Installed as `gavle-backup.timer` (`docs/RUNBOOK.md`). |
 | `diag-db.sh` | quick table list + row counts from the live database. |
 | `verify-certs.sh` | fixes ownership/permissions on the Cloudflare origin certificate after a copy. |
+| `seed-book.html` | browser tool that seeds the order book from your own wallet (approve → deposit → split → 2 asks + 2 bids), and unwinds it all again. `docs/ORDERBOOK.md`. |
 
 ## Deploying the contracts
 

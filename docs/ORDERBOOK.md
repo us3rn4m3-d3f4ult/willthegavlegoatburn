@@ -38,6 +38,22 @@ fill — the UI says so and points people at limit orders. That is a product pro
 not a code problem: either seed a two-sided book from the project wallet or accept
 a limit-only start.
 
+To seed, open `scripts/seed-book.html` in a browser with MetaMask on Base:
+
+```bash
+python -m http.server 8000      # from the repo root
+# http://localhost:8000/scripts/seed-book.html
+```
+
+It connects to your wallet, shows exactly what it will do, then sends
+approve → deposit → split → ask Yes/No → bid Yes/No, one MetaMask confirmation
+each. **Unwind everything** cancels the orders, merges the pairs back to USDC and
+withdraws it — so a seed costs gas (a few tens of cents), not the capital. Nothing
+is signed outside your wallet and no key is ever typed into the page.
+
+Seed from a throwaway wallet rather than the resolver key: resolution is the one
+thing that key exists for.
+
 ## Known gaps
 
 - **No maker / no liquidity programme.** See above.
