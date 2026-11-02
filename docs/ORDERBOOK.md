@@ -38,22 +38,14 @@ fill — the UI says so and points people at limit orders. That is a product pro
 not a code problem: either seed a two-sided book from the project wallet or accept
 a limit-only start.
 
-To build a ladder, open `scripts/seed-ladder.html` in a browser with MetaMask on Base:
+Seeding is done by hand, through the trade panel: a limit **sell** makes the panel
+split USDC into Yes + No shares for you, and a limit **buy** commits cash. Two
+prices either side of 50¢ is enough to make the book usable; deeper ladders only
+matter once there is flow.
 
-```bash
-python -m http.server 8000      # from the repo root
-# http://localhost:8000/scripts/seed-ladder.html
-```
-
-Give it a budget (default 97 USDC) and three prices per side (default 52/56/60
-for sells, 48/44/40 for buys). Half the budget is split into shares and sold in a
-40/30/30 ladder, the other half is cash spread across the buy levels — so the
-whole budget ends up working instead of sitting idle. It prints the exact ladder
-and costs first, then sends approve → deposit → split → each order, waiting for
-chain state (not receipts) between steps.
-
-**Unwind everything** cancels every order, merges the pairs back to USDC and
-withdraws it, so a ladder costs gas (a few tens of cents), not the capital.
+Everything is reversible: close your orders, then **Withdraw** — it merges the
+Yes + No pairs back into $1.00 each and sends the cash out. A seed costs gas, not
+capital.
 
 Seed from a throwaway wallet rather than the resolver key: resolution is the one
 thing that key exists for.

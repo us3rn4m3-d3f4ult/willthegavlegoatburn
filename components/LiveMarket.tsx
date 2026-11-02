@@ -97,7 +97,7 @@ export function LiveMarket() {
   // null means "not known yet" — rendered as a skeleton, never as a dash.
   const stats: { k: string; v: string | null }[] = [
     { k: "Volume", v: snap && snap.volume !== null ? fmtUsd(snap.volume, 2) : null },
-    { k: "Liquidity", v: snap ? fmtUsd(snap.liquidity, 2) : null },
+    { k: "Open orders", v: snap ? fmtUsd(snap.liquidity, 2) : null },
     { k: "Traders", v: snap && snap.traders !== null ? String(snap.traders) : null },
     { k: "Closes", v: `${CLOSES} · ${DAYS_LEFT}d` },
   ];
