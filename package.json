@@ -13,11 +13,9 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@account-kit/core": "^4.88.5",
-    "@account-kit/infra": "^4.88.5",
-    "@account-kit/smart-contracts": "^4.88.5",
     "@walletconnect/ethereum-provider": "^2.26.0",
     "next": "^15.5.0",
+    "permissionless": "^0.5.2",
     "pg": "^8.13.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
