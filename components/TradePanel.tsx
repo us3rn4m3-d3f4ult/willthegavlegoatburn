@@ -16,10 +16,10 @@ import { centsToWei, planBuy, planSell, type Level } from "@/lib/book";
 import { units } from "@/lib/book";
 import { useWallet } from "@/components/WalletProvider";
 import { useTradeState } from "@/components/TradeProvider";
+import { refreshBook, useOrderBook } from "@/components/useOrderBook";
 
 type Mode = "market" | "limit";
 type Action = "buy" | "sell";
-type Book = { asks: Level[]; bids: Level[]; mine: Level[]; trading?: boolean };
 type Balances = { usdc: number; freeYes: number; freeNo: number; wallet: number };
 
 type Tracked = { id: number; shares: number; price: number; isYes: boolean; isAsk: boolean };
@@ -76,7 +76,7 @@ export function TradePanel({
   const [mode, setMode] = useState<Mode>("market");
   const [amount, setAmount] = useState("25");
   const [priceCents, setPriceCents] = useState("50.0");
-  const [book, setBook] = useState<Book | null>(null);
+  const { book } = useOrderBook(account);
   const [bal, setBal] = useState<Balances>({ usdc: 0, freeYes: 0, freeNo: 0, wallet: 0 });
   const [expiresAt, setExpiresAt] = useState<bigint | null>(null);
   const [tracked, setTracked] = useState<Tracked[]>([]);
@@ -104,48 +104,25 @@ export function TradePanel({
     setStatus("");
   }, [sideRequest]);
 
-  const loadBook = useCallback(() => {
-    const q = account ? `?maker=${account.toLowerCase()}` : "";
-    fetch(`/api/orders${q}`, { cache: "no-store" })
-      .then((r) => r.json() as Promise<Book>)
-      .then(setBook)
-      .catch(() => {});
-  }, [account]);
-
   const loadBalances = useCallback(async (): Promise<Balances | null> => {
     if (!account || !BOOK_CONFIGURED) return null;
     try {
-      const [usdc, fy, fn, wallet] = await Promise.all([
-        publicClient.readContract({
-          address: BOOK_ADDRESS,
-          abi: BOOK_ABI,
-          functionName: "usdcBalance",
-          args: [account],
-        }),
-        publicClient.readContract({
-          address: BOOK_ADDRESS,
-          abi: BOOK_ABI,
-          functionName: "freeShares",
-          args: [account, true],
-        }),
-        publicClient.readContract({
-          address: BOOK_ADDRESS,
-          abi: BOOK_ABI,
-          functionName: "freeShares",
-          args: [account, false],
-        }),
-        publicClient.readContract({
-          address: USDC_ADDRESS,
-          abi: ERC20_ABI,
-          functionName: "balanceOf",
-          args: [account],
-        }),
-      ]);
+      // One multicall instead of four round trips, on every refresh.
+      const [usdc, fy, fn, wallet] = (await publicClient.multicall({
+        contracts: [
+          { address: BOOK_ADDRESS, abi: BOOK_ABI, functionName: "usdcBalance", args: [account] },
+          { address: BOOK_ADDRESS, abi: BOOK_ABI, functionName: "freeShares", args: [account, true] },
+          { address: BOOK_ADDRESS, abi: BOOK_ABI, functionName: "freeShares", args: [account, false] },
+          { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "balanceOf", args: [account] },
+        ],
+        allowFailure: false,
+      })) as bigint[];
+
       const next: Balances = {
-        usdc: Number(usdc as bigint) / 1e6,
-        freeYes: Number(fy as bigint) / 1e6,
-        freeNo: Number(fn as bigint) / 1e6,
-        wallet: Number(wallet as bigint) / 1e6,
+        usdc: Number(usdc) / 1e6,
+        freeYes: Number(fy) / 1e6,
+        freeNo: Number(fn) / 1e6,
+        wallet: Number(wallet) / 1e6,
       };
       setBal(next);
       return next;
@@ -155,14 +132,13 @@ export function TradePanel({
   }, [account]);
 
   useEffect(() => {
-    loadBook();
-    const t = setInterval(loadBook, 15_000);
-    return () => clearInterval(t);
-  }, [loadBook, version]);
-
-  useEffect(() => {
     loadBalances();
   }, [loadBalances, version]);
+
+  // A placed order should appear in the book immediately, not on the next poll.
+  useEffect(() => {
+    if (version > 0) refreshBook();
+  }, [version]);
 
   useEffect(() => {
     if (!BOOK_CONFIGURED) return;
@@ -196,6 +172,20 @@ export function TradePanel({
 
   const shortUsdc = Math.max(0, usdcNeeded - bal.usdc + 1e-9);
   const shortShares = action === "sell" ? Math.max(0, sharesWanted - (isYes ? bal.freeYes : bal.freeNo)) : 0;
+
+  // What the Max / 25 / 50 buttons can offer: USDC for a market buy, affordable
+  // shares for a limit buy, free shares for any sell.
+  const availableUsdc = bal.usdc + bal.wallet;
+  const maxAmount =
+    action === "sell"
+      ? isYes
+        ? bal.freeYes
+        : bal.freeNo
+      : mode === "market"
+        ? availableUsdc
+        : limitPrice > 0
+          ? availableUsdc / limitPrice
+          : 0;
 
   const midPrice =
     bestAsk !== undefined && bestBid !== undefined ? (bestAsk + bestBid) / 2 : fallbackMid;
@@ -643,6 +633,24 @@ export function TradePanel({
         />
         <span className="text-[12px] text-dim">{unitLabel}</span>
       </div>
+      {account && maxAmount > 0.000001 ? (
+        <div className="mt-1.5 flex gap-1.5">
+          {[0.25, 0.5, 1].map((share) => (
+            <button
+              key={share}
+              type="button"
+              onClick={() => {
+                const next = maxAmount * share;
+                setAmount(next > 0 ? next.toFixed(2) : "0");
+              }}
+              className="h-9 flex-1 border border-line text-[11.5px] text-muted transition-colors hover:border-line2 hover:text-fg sm:h-7"
+            >
+              {share === 1 ? "Max" : `${share * 100}%`}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
 
       <dl className="mt-3 space-y-1.5 border-t border-line pt-3 text-[12.5px]">
         {mode === "market" ? (
@@ -720,9 +728,26 @@ export function TradePanel({
       </button>
 
       {noLiquidity ? (
-        <p className="mt-2.5 text-[11.5px] leading-relaxed text-ember/90">
-          No {action === "buy" ? "offers" : "bids"} on {isYes ? "Yes" : "No"} to fill against. Use
-          Limit to post your own.
+        <div className="mt-2.5">
+          <p className="text-[11.5px] leading-relaxed text-ember/90">
+            No {action === "buy" ? "offers" : "bids"} on {isYes ? "Yes" : "No"} to fill against
+            right now.
+          </p>
+          <button
+            type="button"
+            onClick={() => setMode("limit")}
+            className="mt-1.5 h-9 rounded-btn border border-line px-3 text-[11.5px] font-medium text-fg transition-colors hover:border-line2 sm:h-8"
+          >
+            Post a limit order instead
+          </button>
+        </div>
+      ) : null}
+
+      {mode === "market" && plan && !plan.complete && plan.steps.length > 0 ? (
+        <p className="mt-2 text-[11.5px] leading-relaxed text-ember/90">
+          {action === "buy"
+            ? `There is only ${plan.shares.toFixed(2)} shares available for that budget — the rest of the money stays in your balance.`
+            : `Only ${plan.shares.toFixed(2)} of ${value.toFixed(2)} shares have a bid. The rest will not be sold.`}
         </p>
       ) : null}
 
@@ -739,7 +764,10 @@ export function TradePanel({
             <span className="num text-muted">0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913</span>
           </p>
           <p>Anything sent on another chain, or in another token, is unrecoverable.</p>
-          <p>Network fees are covered by the project. You need no ETH.</p>
+          <p>
+            You pay the network fee yourself, in ETH on Base — usually a few cents per transaction.
+            The project does not sponsor gas.
+          </p>
         </div>
       </details>
 

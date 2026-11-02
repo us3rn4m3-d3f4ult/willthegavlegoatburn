@@ -74,6 +74,74 @@ create table if not exists comments (
 
 create index if not exists comments_created_at_idx on comments (created_at desc);
 
+-- An optional GIF on a comment: only the GIPHY rendition we render, plus its
+-- natural size so the comment box is the right height before the image loads.
+-- gif_url is re-validated server-side on every post; nothing else is stored.
+alter table comments add column if not exists gif_url text;
+alter table comments add column if not exists gif_width int;
+alter table comments add column if not exists gif_height int;
+alter table comments add column if not exists gif_alt text;
+
+-- One row per (comment, reporter): a single account cannot bury a comment, and
+-- two independent reports hide it until a human looks. Nothing is deleted.
+create table if not exists comment_reports (
+  comment_id uuid not null references comments(id) on delete cascade,
+  user_id    uuid not null references users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (comment_id, user_id)
+);
+
+create index if not exists comment_reports_comment_idx on comment_reports (comment_id);
+
+-- Anonymous, aggregate page counts: a date, a path and a number. No IP, no
+-- cookie, no session id, so nothing here can be traced to a person.
+create table if not exists page_views (
+  day  date not null default current_date,
+  path text not null,
+  hits integer not null default 0,
+  primary key (day, path)
+);
+
+-- Client-side crashes, so they are reviewable instead of only living in the
+-- container log. No IP or account id is stored.
+create table if not exists client_errors (
+  id         bigserial primary key,
+  kind       text,
+  message    text,
+  stack      text,
+  path       text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists client_errors_created_at_idx on client_errors (created_at desc);
+
+-- Cross-process rate limits. The in-memory limiter in lib/httpx is per container,
+-- so a restart clears it and a second instance doubles every allowance; the
+-- credential endpoints therefore also count here.
+create table if not exists rate_limits (
+  bucket       text primary key,
+  window_start timestamptz not null default now(),
+  n            integer not null default 0
+);
+
+-- Email verification. Nullable: an account works without it, and nothing is
+-- gated on it until a mail provider is configured (see lib/mail.ts).
+alter table users add column if not exists email_verified_at timestamptz;
+
+create table if not exists email_tokens (
+  token_hash text primary key,
+  user_id    uuid not null references users(id) on delete cascade,
+  purpose    text not null,
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists email_tokens_user_idx on email_tokens (user_id);
+
+-- Set the first time someone reports a comment, so a human can review without
+-- waiting for the hide threshold.
+alter table comments add column if not exists flagged_at timestamptz;
+
 -- Real price history. Written by /api/market at most once a minute; the chart
 -- reads straight from this, so it is measured rather than invented.
 create table if not exists price_points (

@@ -4,6 +4,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { ChunkGuard } from "@/components/ChunkGuard";
 import { ClientErrorReporter } from "@/components/ClientErrorReporter";
+import { PageViews } from "@/components/PageViews";
 import { WalletProvider } from "@/components/WalletProvider";
 import { SITE, orgJsonLd, websiteJsonLd } from "@/lib/seo";
 
@@ -77,6 +78,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </a>
         <ChunkGuard />
         <ClientErrorReporter />
+        <PageViews />
         <WalletProvider>
           <Header />
           <main id="main" className="mx-auto max-w-[1200px] px-4 sm:px-8">

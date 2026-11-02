@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { RecoveryCodes } from "@/components/RecoveryCodes";
+import { setSession } from "@/components/useSession";
 
 const MESSAGES: Record<string, string> = {
   invalid_email: "That doesn't look like a valid email address.",
@@ -31,13 +32,30 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [codes, setCodes] = useState<string[]>([]);
+  const [confirm, setConfirm] = useState("");
+  const [show, setShow] = useState(false);
+  const [capsLock, setCapsLock] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
 
   const isRegister = mode === "register";
 
+  // Slow the form down after a 429 instead of letting people hammer it.
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
+
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (busy) return;
+    if (busy || cooldown > 0) return;
+    // A typo here is unrecoverable: there is no reset email, only recovery codes.
+    if (isRegister && password !== confirm) {
+      setError("The two passwords do not match.");
+      return;
+    }
     setBusy(true);
     setError("");
 
@@ -49,11 +67,28 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       });
       const data = (await res.json()) as {
         ok?: boolean;
+        pending?: boolean;
         error?: string;
         recoveryCodes?: string[];
       };
 
+      if (res.status === 429) {
+        const retry = Number(res.headers.get("retry-after") ?? 60);
+        setCooldown(Number.isFinite(retry) && retry > 0 ? Math.min(300, retry) : 60);
+        setError("Too many attempts. The button unlocks when you can try again.");
+        return;
+      }
+
+      // A neutral answer: the address may already have an account. The owner got
+      // an email; the person typing learns nothing either way.
+      if (res.ok && data.ok && data.pending) {
+        setError("");
+        setNotice("If that address already has an account, we've emailed it — sign in instead.");
+        return;
+      }
+
       if (res.ok && data.ok) {
+        setSession(true);
         if (Array.isArray(data.recoveryCodes) && data.recoveryCodes.length > 0) {
           setCodes(data.recoveryCodes);
           return;
@@ -116,6 +151,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           id="email"
           type="email"
           autoComplete="email"
+          autoFocus
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -128,29 +164,70 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         <label htmlFor="password" className="block text-[11px] font-medium text-dim">
           Password
         </label>
-        <input
-          id="password"
-          type="password"
-          autoComplete={isRegister ? "new-password" : "current-password"}
-          required
-          minLength={isRegister ? 10 : undefined}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="mt-1.5 h-11 w-full rounded-btn border border-line bg-black px-3.5 text-[13.5px] text-fg outline-none transition-colors placeholder:text-dim focus:border-line2"
-          placeholder={isRegister ? "at least 10 characters" : "••••••••••"}
-        />
+        <div className="relative mt-1.5">
+          <input
+            id="password"
+            type={show ? "text" : "password"}
+            autoComplete={isRegister ? "new-password" : "current-password"}
+            required
+            minLength={isRegister ? 10 : undefined}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyUp={(e) => setCapsLock(e.getModifierState?.("CapsLock") ?? false)}
+            className="h-11 w-full rounded-btn border border-line bg-black px-3.5 pr-16 text-[13.5px] text-fg outline-none transition-colors placeholder:text-dim focus:border-line2"
+            placeholder={isRegister ? "at least 10 characters" : "••••••••••"}
+          />
+          <button
+            type="button"
+            onClick={() => setShow((v) => !v)}
+            aria-pressed={show}
+            className="absolute inset-y-0 right-0 px-3 text-[11px] font-medium text-muted transition-colors hover:text-fg"
+          >
+            {show ? "Hide" : "Show"}
+          </button>
+        </div>
+        {capsLock ? <p className="mt-1 text-[11px] text-ember">Caps lock is on.</p> : null}
       </div>
+
+      {isRegister ? (
+        <div>
+          <label htmlFor="confirm" className="block text-[11px] font-medium text-dim">
+            Confirm password
+          </label>
+          <input
+            id="confirm"
+            type={show ? "text" : "password"}
+            autoComplete="new-password"
+            required
+            minLength={10}
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            className="mt-1.5 h-11 w-full rounded-btn border border-line bg-black px-3.5 text-[13.5px] text-fg outline-none transition-colors placeholder:text-dim focus:border-line2"
+            placeholder="type it again"
+          />
+          {confirm.length > 0 && confirm !== password ? (
+            <p className="mt-1 text-[11px] text-no">Those two do not match.</p>
+          ) : null}
+        </div>
+      ) : null}
 
       <div aria-live="polite" className="min-h-[1.1rem]">
         {error ? <p className="text-[12px] text-yes">{error}</p> : null}
+        {notice ? <p className="text-[12px] text-muted">{notice}</p> : null}
       </div>
 
       <button
         type="submit"
-        disabled={busy}
+        disabled={busy || cooldown > 0}
         className="h-11 w-full rounded-btn bg-fg text-[13px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-60"
       >
-        {busy ? "Working…" : isRegister ? "Create account" : "Sign in"}
+        {busy
+          ? "Working…"
+          : cooldown > 0
+            ? `Try again in ${cooldown}s`
+            : isRegister
+              ? "Create account"
+              : "Sign in"}
       </button>
 
       <p className="pt-1 text-center text-[12px] text-muted">

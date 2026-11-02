@@ -11,7 +11,7 @@ const STEPS = [
   {
     n: "01",
     title: "Get a wallet",
-    body: "Install MetaMask or Coinbase Wallet. You need USDC on Base — that is the money you trade with — Network fees are covered by us, so you need no ETH.",
+    body: "Install MetaMask or Coinbase Wallet. You need USDC on Base — that is the money you trade with — plus a few cents of ETH for the network fee. We charge no protocol fee, but we do not pay your gas.",
   },
   {
     n: "02",
@@ -78,21 +78,6 @@ export default function HowItWorksPage() {
             </div>
           ))}
         </dl>
-      </section>
-
-      <section className="mt-10 border-t border-line pt-8">
-        <h2 className="text-[15px] font-semibold text-fg">The honest version</h2>
-        <ul className="mt-4 space-y-2 text-[13px] leading-relaxed text-muted">
-          <li>You can lose everything you put in.</li>
-          <li>
-            If nobody is selling, you cannot buy instantly — post a limit order and wait instead.
-          </li>
-          <li>
-            The money sits in a public contract, not with us, so nobody can freeze, reverse or
-            refund a trade.
-          </li>
-          <li>Nothing here is investment advice, and it is 18+.</li>
-        </ul>
       </section>
 
       <p className="mt-10 border-t border-line pt-6 text-[13px] text-muted">

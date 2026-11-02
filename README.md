@@ -1,10 +1,75 @@
 # willthegavlegoatburn
 
 A non-custodial prediction market on whether the Gävle goat burns in 2026.
-Settled in USDC on Base. No fees, no house, no custody.
+Settled in USDC on Base. No protocol fees, no house, no custody.
 
-**Status:** front-end deployed to the server; `GavleGoatMarket` contract + test suite
-passing locally. Auth API and indexer are next.
+**Status:** live at https://willthegavlegoatburn.com — accounts, order book,
+trading, comments (with GIPHY), email verification, backups and monitoring are
+all running. The order book has no maker, so market buys need someone to post a
+limit order first.
+
+---
+
+## Stack
+
+| Layer | What |
+|---|---|
+| Contracts | Solidity + Foundry (`contracts/`), a CLOB on Base with an internal USDC balance and per-caller `withdraw` |
+| Web | Next 15 (App Router) + React 19 + Tailwind 4, no UI framework |
+| Chain reads | viem public client, `multicall`-batched, 3 s server cache |
+| Data | Postgres 16 in Compose: accounts, sessions, comments, page counts, error log |
+| Wallet | injected EIP-6963 / WalletConnect 2 (mobile); the user's own wallet signs every trade |
+| Ops | Docker Compose + Caddy + Cloudflare, `scripts/deploy.py` one-command deploy |
+
+## Quick start
+
+```bash
+npm install
+cp .env.example .env.local        # fill in the chain + database values
+npm run dev                       # http://localhost:3000
+npm run typecheck                 # what CI runs
+```
+
+```bash
+# contracts (Foundry is vendored in .tools/, gitignored)
+cd contracts && forge install foundry-rs/forge-std && forge test -vv
+```
+
+## Deploying
+
+```bash
+python scripts/deploy.py          # tar → upload → docker build → up -d → smoke checks
+python scripts/deploy.py --no-build   # config-only change
+```
+
+Deploys are gated: the script fails if the app cannot reach the RPC.
+
+## Layout
+
+| Path | What lives there |
+|---|---|
+| `app/` | routes; `app/api/*` are route handlers (auth, comments, market, orders, ops) |
+| `components/` | client components; `useSession`, `useOrderBook` are shared stores |
+| `lib/` | server + shared logic: auth, db, moderation, mail, gifs, book maths |
+| `contracts/` | the market and AMM contracts + Foundry tests |
+| `infra/` | Compose, Caddyfile, hardening script, backup timer |
+| `scripts/` | deploy, database setup, Python test suites (see `scripts/README.md`) |
+| `docs/` | runbook, accounts, email, gifs, metrics, security audit |
+
+Start with **`docs/RUNBOOK.md`** (is it up, backups, rollback), then
+**`docs/ACCOUNTS.md`** (how auth works) and **`docs/SECURITY_AUDIT.md`**
+(findings, what is fixed, what is accepted with reasoning).
+
+## Tests
+
+```bash
+cd contracts && forge test -vv     # contract suite
+python scripts/test_auth.py        # auth API, against a running instance
+python scripts/test_recovery.py
+python scripts/test_comments.py
+```
+
+CI runs `forge test` and `npx tsc --noEmit` on every push (`.github/workflows/ci.yml`).
 
 ---
 

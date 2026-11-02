@@ -1,6 +1,8 @@
+import { createHash } from "node:crypto";
 import { crossOrigin, hashPassword, normalizeEmail, passwordProblem } from "@/lib/auth";
 import { dbReady, getPool } from "@/lib/db";
 import { clientIp, createLimiter, json, readJson } from "@/lib/httpx";
+import { allowPersistent } from "@/lib/rateLimit";
 import { consumeCode } from "@/lib/recovery";
 import { destroyAllSessions } from "@/lib/session";
 
@@ -26,6 +28,16 @@ export async function POST(req: Request) {
   if (!email || !code) return json({ ok: false, error: "invalid_code" }, 400);
   const pp = passwordProblem(newPassword, email);
   if (pp) return json({ ok: false, error: pp }, 400);
+
+  // Same persistent buckets as login: a recovery code is password-equivalent.
+  const bucket = createHash("sha256").update(email).digest("hex");
+  const [ipOk, emailOk] = await Promise.all([
+    allowPersistent(`recover:ip:${clientIp(req)}`, 20, 600),
+    allowPersistent(`recover:email:${bucket}`, 10, 900),
+  ]);
+  if (!ipOk || !emailOk) {
+    return json({ ok: false, error: "rate_limited" }, 429, { "Retry-After": "300" });
+  }
 
   if (!(await dbReady())) return json({ ok: false, error: "accounts_unavailable" }, 503);
   const pool = getPool();

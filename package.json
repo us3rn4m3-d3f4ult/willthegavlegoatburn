@@ -19,7 +19,8 @@
     "pg": "^8.13.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "viem": "^2.37.0"
+    "viem": "^2.37.0",
+    "webauthn-p256": "^0.0.10"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.0",

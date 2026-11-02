@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { AbstractAvatar } from "@/components/AbstractAvatar";
 import { RecoveryCodes } from "@/components/RecoveryCodes";
 import { SessionList } from "@/components/SessionList";
-import { Withdraw } from "@/components/Withdraw";
+import { setSession } from "@/components/useSession";
 
 type Me = {
   user: { id: string; email: string; createdAt: string } | null;
@@ -95,6 +95,10 @@ export function AccountView() {
     e.preventDefault();
     const ok = await call({ action: "delete", currentPassword, confirm: confirmText.trim() });
     if (ok) {
+      // The wallet stays connected here after the account is gone; the session
+      // is what decides whether balances may be shown, so drop it before leaving.
+      setSession(false);
+
       router.push("/");
       router.refresh();
     }
@@ -130,7 +134,11 @@ export function AccountView() {
 
   async function onSignOut() {
     await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+    setSession(false);
     setMe({ user: null, sessions: 0 });
+    // Leave the account page: it requires a session now, and the wallet that is
+    // still connected on this device is not evidence of one.
+    router.push("/");
     router.refresh();
   }
 
@@ -233,6 +241,16 @@ export function AccountView() {
       {error ? <p className="text-[12px] text-no">{error}</p> : null}
       {notice ? <p className="text-[12px] text-yes">{notice}</p> : null}
 
+      {/* Hazard tape, with its label in the middle of the line. Everything below
+          this belongs to the danger zone: the recovery codes and the delete
+          button are both irreversible-ish, so they sit on the same side of it. */}
+      <div className="relative flex items-center justify-center">
+        <div className="hazard absolute inset-x-0 top-1/2 -translate-y-1/2" aria-hidden="true" />
+        <span className="relative bg-black px-3 py-1 text-[10.5px] font-semibold tracking-[0.2em] text-no">
+          danger zone
+        </span>
+      </div>
+
       <section className="panel p-5">
         <h2 className="text-[13px] font-semibold text-fg">Recovery codes</h2>
         <p className="mt-1.5 text-[12px] leading-relaxed text-muted">
@@ -259,7 +277,6 @@ export function AccountView() {
         </div>
       </section>
 
-      <div className="hazard" aria-hidden="true" />
       <section className="panel border-no/25 p-5">
         <h2 className="text-[13px] font-semibold text-fg">Delete account</h2>
         <p className="mt-1.5 text-[12px] leading-relaxed text-muted">

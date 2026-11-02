@@ -4,18 +4,20 @@ import { useCallback, useEffect, useState } from "react";
 import { units } from "@/lib/book";
 import { BOOK_ABI, BOOK_ADDRESS, BOOK_CONFIGURED, chain, publicClient } from "@/lib/web3";
 import { useWallet } from "@/components/WalletProvider";
+import { useSession } from "@/components/useSession";
 
 const DECIMALS = 1_000_000; // USDC on Base
 
 /** Pull free USDC out of the market contract and back into the wallet. */
 export function Withdraw() {
   const { account, connect, ensureChain, walletClient } = useWallet();
+  const signedIn = useSession();
   const [amount, setAmount] = useState(0);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
 
   const load = useCallback(async () => {
-    if (!account || !BOOK_CONFIGURED) return;
+    if (signedIn !== true || !account || !BOOK_CONFIGURED) return;
     try {
       const raw = (await publicClient.readContract({
         address: BOOK_ADDRESS,
@@ -27,7 +29,7 @@ export function Withdraw() {
     } catch {
       // A failed read leaves the last known figure; withdrawing re-checks anyway.
     }
-  }, [account]);
+  }, [account, signedIn]);
 
   useEffect(() => {
     void load();
@@ -60,6 +62,9 @@ export function Withdraw() {
   }
 
   if (!BOOK_CONFIGURED) return null;
+  // A connected wallet is not an identity: without a session this panel would
+  // show a stranger's — or a deleted account's — credited balance.
+  if (signedIn !== true) return null;
 
   return (
     <section className="panel p-5">

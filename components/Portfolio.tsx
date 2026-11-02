@@ -34,41 +34,45 @@ export function Portfolio() {
   const [failed, setFailed] = useState(false);
   const [linked, setLinked] = useState<`0x${string}` | null>(null);
 
-  // The phone has no wallet, but the account knows which address to read.
+  // The phone has no wallet, but the account knows which address to read. Only
+  // ask while there is a session: a wallet that is still connected after a
+  // sign-out must not become a read-only view of someone else's balance.
   useEffect(() => {
+    if (signedIn !== true) {
+      setLinked(null);
+      return;
+    }
+    let alive = true;
     fetch(`/api/auth/me`, { cache: `no-store` })
       .then((r) => r.json() as Promise<{ wallet?: string | null }>)
-      .then((d) => setLinked((d.wallet as `0x${string}` | null) ?? null))
+      .then((d) => {
+        if (alive) setLinked((d.wallet as `0x${string}` | null) ?? null);
+      })
       .catch(() => {});
-  }, []);
+    return () => {
+      alive = false;
+    };
+  }, [signedIn]);
 
-  const addr = account ?? linked;
+  // No session, no address — the money panel is for the signed-in owner only.
+  const addr = signedIn === true ? (account ?? linked) : null;
 
   const load = useCallback(async () => {
     if (!addr || !BOOK_CONFIGURED) return;
     try {
-      const read = <T,>(fn: "usdcBalance" | "yesBalance" | "noBalance" | "lockedYes" | "lockedNo" | "openOrders") =>
-        publicClient.readContract({
-          address: BOOK_ADDRESS,
-          abi: BOOK_ABI,
-          functionName: fn,
-          args: [addr],
-        }) as Promise<bigint>;
-
-      const [wallet, inMarket, yes, no, lYes, lNo, orders] = await Promise.all([
-        publicClient.readContract({
-          address: USDC_ADDRESS,
-          abi: ERC20_ABI,
-          functionName: "balanceOf",
-          args: [addr],
-        }) as Promise<bigint>,
-        read("usdcBalance"),
-        read("yesBalance"),
-        read("noBalance"),
-        read("lockedYes"),
-        read("lockedNo"),
-        read("openOrders"),
-      ]);
+      // One multicall instead of seven round trips: this runs every 20s per tab.
+      const [wallet, inMarket, yes, no, lYes, lNo, orders] = (await publicClient.multicall({
+        contracts: [
+          { address: USDC_ADDRESS, abi: ERC20_ABI, functionName: "balanceOf", args: [addr] },
+          { address: BOOK_ADDRESS, abi: BOOK_ABI, functionName: "usdcBalance", args: [addr] },
+          { address: BOOK_ADDRESS, abi: BOOK_ABI, functionName: "yesBalance", args: [addr] },
+          { address: BOOK_ADDRESS, abi: BOOK_ABI, functionName: "noBalance", args: [addr] },
+          { address: BOOK_ADDRESS, abi: BOOK_ABI, functionName: "lockedYes", args: [addr] },
+          { address: BOOK_ADDRESS, abi: BOOK_ABI, functionName: "lockedNo", args: [addr] },
+          { address: BOOK_ADDRESS, abi: BOOK_ABI, functionName: "openOrders", args: [addr] },
+        ],
+        allowFailure: false,
+      })) as bigint[];
 
       setSnap({
         wallet: Number(wallet) / 1e6,
@@ -86,10 +90,15 @@ export function Portfolio() {
   }, [addr]);
 
   useEffect(() => {
+    if (!addr) {
+      setSnap(null);
+      setFailed(false);
+      return;
+    }
     void load();
     const t = setInterval(load, 20_000);
     return () => clearInterval(t);
-  }, [load]);
+  }, [addr, load]);
 
   useEffect(() => {
     fetch("/api/market", { cache: "no-store" })
@@ -104,7 +113,11 @@ export function Portfolio() {
     return (
       <section className="panel p-4">
         <h2 className="panel-title">Your money</h2>
-        {signedIn === true ? (
+        {signedIn === null ? (
+          // Session check in flight: show neither balances nor a prompt, so a
+          // signed-in owner never sees "sign in" flash on their own page.
+          null
+        ) : signedIn ? (
           <div className="mt-2 space-y-1.5 text-[12.5px] leading-relaxed text-muted">
             <p>You are signed in, but no wallet is connected on this device.</p>
             <p className="text-dim">

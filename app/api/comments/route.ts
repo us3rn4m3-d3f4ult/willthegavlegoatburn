@@ -1,7 +1,9 @@
 import { createHmac } from "node:crypto";
 import { crossOrigin } from "@/lib/auth";
 import { dbReady, getPool } from "@/lib/db";
+import { normalizeGif, type Gif } from "@/lib/gifs";
 import { clientIp, createLimiter, json, readJson } from "@/lib/httpx";
+import { VERIFY_REQUIRED } from "@/lib/mail";
 import { moderate } from "@/lib/moderation";
 import { sessionUser } from "@/lib/session";
 
@@ -25,7 +27,22 @@ type Row = {
   username: string | null;
   yes_shares: string;
   no_shares: string;
+  gif_url: string | null;
+  gif_width: number | null;
+  gif_height: number | null;
+  gif_alt: string | null;
 };
+
+/** The stored GIF columns, in the shape the client renders. */
+function gifOf(row: Row): Gif | null {
+  if (!row.gif_url) return null;
+  return {
+    url: row.gif_url,
+    width: row.gif_width ?? 200,
+    height: row.gif_height ?? 200,
+    alt: row.gif_alt ?? "GIF",
+  };
+}
 
 type Cursor = { next: string | null };
 
@@ -59,6 +76,7 @@ export async function GET(req: Request) {
   const { rows } = await pool
     .query(
       `select c.id, c.body, c.created_at, c.user_id, u.username,
+              c.gif_url, c.gif_width, c.gif_height, c.gif_alt,
               coalesce(p.yes_shares, 0)::text as yes_shares,
               coalesce(p.no_shares, 0)::text  as no_shares
          from comments c
@@ -91,6 +109,7 @@ export async function GET(req: Request) {
       yes: Number(r.yes_shares),
       no: Number(r.no_shares),
       mine: Boolean(viewer && viewer.id === r.user_id),
+      gif: gifOf(r),
     })),
   });
 }
@@ -101,16 +120,34 @@ export async function POST(req: Request) {
   const user = await sessionUser(req);
   if (!user) return json({ ok: false, error: "sign_in_required" }, 401);
 
+  // Only once verification is known to work: an unconfirmed address may not post.
+  if (VERIFY_REQUIRED && !user.emailVerifiedAt) {
+    return json({ ok: false, error: "verify_email" }, 403);
+  }
+
   if (!attemptLimiter(user.id)) {
     return json({ ok: false, error: "rate_limited" }, 429, { "Retry-After": "60" });
   }
 
-  const body = await readJson<{ body?: unknown }>(req);
+  const body = await readJson<{ body?: unknown; gif?: unknown }>(req);
   if (!body) return json({ ok: false, error: "invalid_body" }, 400);
 
-  const text = String(body.body ?? "");
-  const verdict = moderate(text);
-  if (!verdict.ok) return json({ ok: false, error: verdict.reason }, 400);
+  const text = String(body.body ?? "").trim();
+
+  // A GIF is optional. When one is sent it must be a GIPHY CDN rendition — the
+  // client's search result is not trusted, `normalizeGif` is the allowlist.
+  const wantsGif = body.gif !== undefined && body.gif !== null;
+  const gif = wantsGif ? normalizeGif(body.gif) : null;
+  if (wantsGif && !gif) return json({ ok: false, error: "bad_gif" }, 400);
+
+  // A GIF on its own is a complete comment; any text that is present is still
+  // moderated, so a link or a slur cannot hitch a ride on the image.
+  if (!gif || text.length > 0) {
+    const verdict = moderate(text);
+    if (!verdict.ok && !(gif && verdict.reason === "too_short")) {
+      return json({ ok: false, error: verdict.reason }, 400);
+    }
+  }
 
   const pool = getPool();
   if (!pool) return json({ ok: false, error: "accounts_unavailable" }, 503);
@@ -127,9 +164,10 @@ export async function POST(req: Request) {
   }
 
   const { rows } = await pool.query(
-    `insert into comments (user_id, body) values ($1, $2)
-     returning id, body, created_at, user_id`,
-    [user.id, text.trim()],
+    `insert into comments (user_id, body, gif_url, gif_width, gif_height, gif_alt)
+     values ($1, $2, $3, $4, $5, $6)
+     returning id, body, created_at, user_id, gif_url, gif_width, gif_height, gif_alt`,
+    [user.id, text, gif?.url ?? null, gif?.width ?? null, gif?.height ?? null, gif?.alt ?? null],
   );
 
   const row = rows[0] as Row;
@@ -144,6 +182,7 @@ export async function POST(req: Request) {
         yes: 0,
         no: 0,
         mine: true,
+        gif: gifOf(row),
       },
     },
     201,

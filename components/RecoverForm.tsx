@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { setSession } from "@/components/useSession";
 
 const MESSAGES: Record<string, string> = {
   invalid_code: "That code is not valid, or it has already been used.",
@@ -34,6 +35,8 @@ export function RecoverForm() {
       });
       const data = (await res.json()) as { ok?: boolean; error?: string };
       if (res.ok && data.ok) {
+        // Recovery destroys every session, this one included.
+        setSession(false);
         setDone(true);
         return;
       }

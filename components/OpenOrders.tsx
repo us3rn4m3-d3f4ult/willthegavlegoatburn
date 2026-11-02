@@ -1,31 +1,20 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { BOOK_ABI, BOOK_ADDRESS, BOOK_CONFIGURED, chain, publicClient } from "@/lib/web3";
 import { useWallet } from "@/components/WalletProvider";
 import { useSession } from "@/components/useSession";
-import type { Level } from "@/lib/book";
+import { refreshBook, useOrderBook } from "@/components/useOrderBook";
 
 export function OpenOrders() {
   const { account, ensureChain, walletClient } = useWallet();
   const signedIn = useSession();
-  const [orders, setOrders] = useState<Level[] | null>(null);
+  const { book } = useOrderBook(account);
   const [busy, setBusy] = useState<number | null>(null);
   const [note, setNote] = useState("");
 
-  const load = useCallback(() => {
-    if (!account) return;
-    fetch(`/api/orders?maker=${account.toLowerCase()}`, { cache: "no-store" })
-      .then((r) => r.json() as Promise<{ mine?: Level[] }>)
-      .then((d) => setOrders(d.mine ?? []))
-      .catch(() => {});
-  }, [account]);
-
-  useEffect(() => {
-    load();
-    const t = setInterval(load, 20_000);
-    return () => clearInterval(t);
-  }, [load]);
+  // The shared book already asks for `?maker=` when a wallet is connected.
+  const orders = signedIn === true ? book?.mine ?? null : null;
 
   async function cancel(id: number) {
     if (!account || !(await ensureChain())) return;
@@ -44,7 +33,7 @@ export function OpenOrders() {
       });
       await publicClient.waitForTransactionReceipt({ hash });
       setNote(`Order #${id} closed. The escrow is back on your in-market balance.`);
-      load();
+      refreshBook();
     } catch {
       setNote("Cancel was rejected.");
     } finally {
@@ -59,15 +48,19 @@ export function OpenOrders() {
       <header className="panel-head">
         <h2 className="panel-title">Open orders</h2>
         <span className="num text-[11.5px] text-dim">
-          {!account ? "—" : orders === null ? "—" : orders.length}
+          {signedIn !== true || !account ? "—" : orders === null ? "—" : orders.length}
         </span>
       </header>
 
-      {!account ? (
+      {signedIn !== true ? (
         <p className="px-4 py-5 text-[12.5px] text-muted">
-          {signedIn === true
-            ? "Signed in — connect a wallet on this device to see its orders. On a phone, use the MetaMask or Coinbase Wallet in-app browser."
-            : "Connect a wallet to see your orders."}
+          Sign in to see your orders. A wallet stays connected after you sign out, so this list
+          is only shown to the account that owns it.
+        </p>
+      ) : !account ? (
+        <p className="px-4 py-5 text-[12.5px] text-muted">
+          Signed in — connect a wallet on this device to see its orders. On a phone, use the
+          MetaMask or Coinbase Wallet in-app browser.
         </p>
       ) : orders && orders.length === 0 ? (
         <p className="px-4 py-5 text-[12.5px] text-muted">No open orders.</p>
@@ -83,7 +76,7 @@ export function OpenOrders() {
                 type="button"
                 onClick={() => cancel(o.id)}
                 disabled={busy === o.id}
-                className="ml-auto h-7 border border-line px-2.5 text-[11.5px] text-muted transition-colors hover:border-line2 hover:text-fg disabled:opacity-40"
+                className="ml-auto h-9 border border-line px-2.5 text-[11.5px] text-muted transition-colors hover:border-line2 hover:text-fg disabled:opacity-40 sm:h-7"
               >
                 {busy === o.id ? "…" : "Close"}
               </button>

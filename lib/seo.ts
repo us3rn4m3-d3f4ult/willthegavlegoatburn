@@ -10,7 +10,7 @@ export const SITE = {
   title: "Will the Gävle goat burn in 2026?",
   shortTitle: "willthegavlegoatburn",
   description:
-    "The Gävle goat has burned 30+ times since 1966. Trade Yes or No on 2026 in USDC on Base — non-custodial, no fees, no house.",
+    "The Gävle goat has burned 30+ times since 1966. Trade Yes or No on 2026 in USDC on Base — non-custodial, no protocol fees, no house.",
   locale: "en_GB",
   themeColor: "#000000",
   /** Public source. The open-source claim is only checkable if this is linked. */
@@ -43,11 +43,11 @@ export const FAQ: FaqItem[] = [
   },
   {
     q: "Is this custodial? Does it hold my funds?",
-    a: "No. Your USDC sits in a smart contract on Base and only your wallet can move it. There is no account balance to withdraw from and no operator key that can touch your position.",
+    a: "No. Your USDC sits in the market contract on Base, credited to your own address, and only your wallet can withdraw or trade it. There is no operator key that can touch your position.",
   },
   {
     q: "What fees are there?",
-    a: "No protocol fee, no rake, no cut of any payout. We cover the network fee for your trades — capped monthly — so you never need to hold ETH.",
+    a: "No protocol fee, no rake, no cut of any payout. You pay the Base network fee for each transaction yourself, in ETH — usually a few cents. The project does not sponsor gas, so keep a small ETH balance on Base.",
   },
 ];
 
@@ -87,38 +87,5 @@ export function faqJsonLd(items: FaqItem[] = FAQ) {
       name: i.q,
       acceptedAnswer: { "@type": "Answer", text: i.a },
     })),
-  };
-}
-
-export function breadcrumbJsonLd(trail: { name: string; path: string }[]) {
-  return {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: trail.map((t, i) => ({
-      "@type": "ListItem",
-      position: i + 1,
-      name: t.name,
-      item: `${SITE.url}${t.path}`,
-    })),
-  };
-}
-
-export function articleJsonLd(opts: {
-  headline: string;
-  description: string;
-  path: string;
-  datePublished: string;
-  dateModified: string;
-}) {
-  return {
-    "@context": "https://schema.org",
-    "@type": "Article",
-    headline: opts.headline,
-    description: opts.description,
-    mainEntityOfPage: `${SITE.url}${opts.path}`,
-    datePublished: opts.datePublished,
-    dateModified: opts.dateModified,
-    author: { "@id": `${SITE.url}/#org` },
-    publisher: { "@id": `${SITE.url}/#org` },
   };
 }

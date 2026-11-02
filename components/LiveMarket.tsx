@@ -2,6 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { fmtUsd } from "@/lib/format";
+import { MARKET } from "@/lib/market";
+
+const CLOSES = new Date(MARKET.closesAt).toLocaleDateString("en-GB", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  timeZone: "Europe/Stockholm",
+});
+const DAYS_LEFT = Math.max(
+  0,
+  Math.ceil((new Date(MARKET.closesAt).getTime() - Date.now()) / 86_400_000),
+);
 
 type Snap = {
   configured: boolean;
@@ -87,7 +99,7 @@ export function LiveMarket() {
     { k: "Volume", v: snap && snap.volume !== null ? fmtUsd(snap.volume, 2) : null },
     { k: "Liquidity", v: snap ? fmtUsd(snap.liquidity, 2) : null },
     { k: "Traders", v: snap && snap.traders !== null ? String(snap.traders) : null },
-    { k: "Closes", v: "1 Jan 2027" },
+    { k: "Closes", v: `${CLOSES} · ${DAYS_LEFT}d` },
   ];
 
   return (

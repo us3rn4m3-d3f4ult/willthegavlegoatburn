@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { addSubscriber, subscriberCount } from "@/lib/notify";
+import { clientIp } from "@/lib/httpx";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,17 +13,11 @@ const WINDOW_MS = 60_000;
 const MAX_PER_WINDOW = 5;
 const hits = new Map<string, { n: number; t: number }>();
 
-function clientIp(req: Request): string {
-  return (
-    req.headers.get("cf-connecting-ip")?.trim() ||
-    req.headers.get("x-real-ip")?.trim() ||
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    "unknown"
-  );
-}
-
 export async function POST(req: Request) {
   const now = Date.now();
+  // Same lookup as every other route: X-Real-IP first, which Caddy rewrites from
+  // the TCP peer. CF-Connecting-IP is client-controllable if the origin is ever
+  // reachable directly, so it is only a fallback.
   const ip = clientIp(req);
   const prev = hits.get(ip);
   const fresh = !prev || now - prev.t > WINDOW_MS;

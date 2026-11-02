@@ -1,7 +1,8 @@
 # Deploying the contract
 
-Everything is wired. The only thing standing between you and a deployed market is
-**test ETH in the deployer wallet**.
+> **Status: deployed.** The live CLOB is at `0xcfa25534fc14929e29bd1f4fefe5cd4d5ce9880f`
+> on Base mainnet and the site reads it (`docs/ORDERBOOK.md`). This page is the
+> runbook for deploying a *new* copy, e.g. next year's market.
 
 | | |
 |---|---|

@@ -12,7 +12,8 @@ export default function RegisterPage() {
     <div className="mx-auto max-w-[420px] py-16">
       <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-fg">Create account</h1>
       <p className="mt-2 text-[13px] leading-relaxed text-muted">
-        Email and a password. You can delete it again in one click, permanently.
+        Email and a password. No email verification, no reset email — you will get ten one-time
+        recovery codes instead, and you can delete the account permanently at any time.
       </p>
 
       <div className="mt-6 panel p-5">

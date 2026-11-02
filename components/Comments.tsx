@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { GifPicker } from "@/components/GifPicker";
+import { GIFS_CONFIGURED, type Gif } from "@/lib/gifs";
 
 type Comment = {
   id: string;
@@ -11,6 +13,7 @@ type Comment = {
   yes: number;
   no: number;
   mine: boolean;
+  gif: Gif | null;
 };
 
 const ERRORS: Record<string, string> = {
@@ -20,8 +23,10 @@ const ERRORS: Record<string, string> = {
   too_long: "Keep it under 500 characters.",
   shouting: "Try not to shout.",
   spam: "That looks like spam.",
+  bad_gif: "That GIF could not be used. Pick another one.",
   rate_limited: "You're posting too fast. Wait a few minutes.",
   sign_in_required: "Sign in to comment.",
+  verify_email: "Confirm your email first — open your account page to send the link.",
   accounts_unavailable: "Comments are temporarily unavailable.",
 };
 
@@ -43,9 +48,12 @@ export function Comments() {
   const [pages, setPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [text, setText] = useState("");
+  const [gif, setGif] = useState<Gif | null>(null);
+  const [picker, setPicker] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [reported, setReported] = useState<string[]>([]);
 
   const load = useCallback((p: number) => {
     setLoaded(false);
@@ -85,11 +93,13 @@ export function Comments() {
       const res = await fetch("/api/comments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: text }),
+        body: JSON.stringify({ body: text, ...(gif ? { gif } : {}) }),
       });
       const data = (await res.json()) as { ok?: boolean; error?: string; comment?: Comment };
       if (res.ok && data.ok && data.comment) {
         setText("");
+        setGif(null);
+        setPicker(false);
         setPage(1);
         load(1);
         return;
@@ -123,6 +133,30 @@ export function Comments() {
     }
   }
 
+  async function report(id: string) {
+    if (reported.includes(id)) return;
+    setError("");
+    try {
+      const res = await fetch("/api/comments/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const data = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !data.ok) {
+        setError(
+          data.error === "sign_in_required"
+            ? "Sign in to report a comment."
+            : "Could not report that one.",
+        );
+        return;
+      }
+      setReported((list) => [...list, id]);
+    } catch {
+      setError("Network error.");
+    }
+  }
+
   return (
     <section className="panel">
       <header className="panel-head">
@@ -148,11 +182,50 @@ export function Comments() {
               placeholder="What do you think happens to the goat?"
               className="w-full resize-y rounded-btn border border-line bg-black px-3 py-2 text-[13px] text-fg outline-none focus:border-line2"
             />
+            {gif ? (
+              <div className="mt-2 flex items-center gap-2 border border-line p-1.5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={gif.url}
+                  alt=""
+                  width={gif.width}
+                  height={gif.height}
+                  className="h-10 w-auto"
+                />
+                <span className="text-[11.5px] text-muted">GIF attached</span>
+                <button
+                  type="button"
+                  onClick={() => setGif(null)}
+                  className="ml-auto h-9 px-2 text-[11px] text-dim transition-colors hover:text-no sm:h-8"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : null}
+
+            {picker ? <GifPicker onPick={setGif} onClose={() => setPicker(false)} /> : null}
+
             <div className="mt-2 flex items-center justify-between gap-3">
-              <span className="num text-[11px] text-dim">{text.length}/500</span>
+              <div className="flex items-center gap-2">
+                {GIFS_CONFIGURED ? (
+                  <button
+                    type="button"
+                    onClick={() => setPicker((open) => !open)}
+                    aria-expanded={picker}
+                    className={`h-8 rounded-btn border px-2.5 text-[11.5px] font-semibold transition-colors ${
+                      picker || gif
+                        ? "border-fg bg-fg text-black"
+                        : "border-line text-muted hover:border-line2 hover:text-fg"
+                    }`}
+                  >
+                    GIF
+                  </button>
+                ) : null}
+                <span className="num text-[11px] text-dim">{text.length}/500</span>
+              </div>
               <button
                 type="submit"
-                disabled={busy || text.trim().length < 2}
+                disabled={busy || (text.trim().length < 2 && gif === null)}
                 className="h-8 rounded-btn bg-fg px-3.5 text-[12px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-40"
               >
                 {busy ? "Posting…" : "Post"}
@@ -194,15 +267,43 @@ export function Comments() {
                       type="button"
                       onClick={() => remove(c.id)}
                       disabled={deleting === c.id}
-                      className="ml-auto text-[11px] text-dim transition-colors hover:text-no disabled:opacity-40"
+                      className="ml-auto h-9 px-2 text-[11px] text-dim transition-colors hover:text-no disabled:opacity-40 sm:h-7"
                     >
                       {deleting === c.id ? "Deleting…" : "Delete"}
                     </button>
-                  ) : null}
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => report(c.id)}
+                      disabled={reported.includes(c.id)}
+                      title="Two reports hide a comment until it is reviewed"
+                      className="ml-auto h-9 px-2 text-[11px] text-dim transition-colors hover:text-no disabled:opacity-40 sm:h-7"
+                    >
+                      {reported.includes(c.id) ? "Reported" : "Report"}
+                    </button>
+                  )}
                 </div>
-                <p className="mt-1 whitespace-pre-wrap break-words text-[12.5px] leading-relaxed text-fg">
-                  {c.body}
-                </p>
+                {c.body ? (
+                  <p className="mt-1 whitespace-pre-wrap break-words text-[12.5px] leading-relaxed text-fg">
+                    {c.body}
+                  </p>
+                ) : null}
+                {c.gif ? (
+                  // GIPHY's 200px-wide rendition. Intrinsic width/height make the
+                  // box the right size before the bytes land, and the max-* pair
+                  // caps a tall GIF so it cannot take over the thread — auto
+                  // dimensions keep the aspect ratio, so nothing is squashed.
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={c.gif.url}
+                    alt={c.gif.alt}
+                    width={c.gif.width}
+                    height={c.gif.height}
+                    loading="lazy"
+                    decoding="async"
+                    className="mt-2 block h-auto w-auto max-h-[240px] max-w-[240px] rounded-btn border border-line"
+                  />
+                ) : null}
               </li>
             ))
           )}
@@ -216,7 +317,7 @@ export function Comments() {
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
-              className="h-7 border border-line px-2.5 text-muted transition-colors hover:border-line2 hover:text-fg disabled:opacity-40"
+              className="h-9 border border-line px-2.5 text-muted transition-colors hover:border-line2 hover:text-fg disabled:opacity-40 sm:h-7"
             >
               Previous
             </button>
@@ -226,7 +327,7 @@ export function Comments() {
             <button
               onClick={() => setPage((p) => Math.min(pages, p + 1))}
               disabled={page >= pages}
-              className="h-7 border border-line px-2.5 text-muted transition-colors hover:border-line2 hover:text-fg disabled:opacity-40"
+              className="h-9 border border-line px-2.5 text-muted transition-colors hover:border-line2 hover:text-fg disabled:opacity-40 sm:h-7"
             >
               Next
             </button>

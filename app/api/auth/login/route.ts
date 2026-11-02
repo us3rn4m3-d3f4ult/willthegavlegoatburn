@@ -1,6 +1,8 @@
+import { createHash } from "node:crypto";
 import { crossOrigin, dummyVerify, normalizeEmail, sessionCookie, verifyPassword } from "@/lib/auth";
 import { dbReady, getPool } from "@/lib/db";
 import { clientIp, createLimiter, json, readJson } from "@/lib/httpx";
+import { allowPersistent } from "@/lib/rateLimit";
 import { createSession } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -22,6 +24,17 @@ export async function POST(req: Request) {
   const password = String(body.password ?? "");
 
   if (!email || !password) return json({ ok: false, error: "invalid_credentials" }, 401);
+
+  // Two buckets that survive a restart: one per address, one per IP. The memory
+  // limiter above stops a burst; these stop a slow distributed attempt.
+  const bucket = createHash("sha256").update(email).digest("hex");
+  const [ipOk, emailOk] = await Promise.all([
+    allowPersistent(`login:ip:${clientIp(req)}`, 30, 600),
+    allowPersistent(`login:email:${bucket}`, 10, 900),
+  ]);
+  if (!ipOk || !emailOk) {
+    return json({ ok: false, error: "rate_limited" }, 429, { "Retry-After": "300" });
+  }
 
   if (!(await dbReady())) return json({ ok: false, error: "accounts_unavailable" }, 503);
   const pool = getPool();

@@ -38,6 +38,12 @@ is registered.
 - Changing the password deletes **every** session for that user and issues one new
   one.
 - Deleting the account cascades to all sessions instantly.
+- `/account` is **server-gated**: no valid session, no page — a signed-out visitor
+  is redirected to `/login`. A connected wallet survives sign-out (the extension
+  and the WalletConnect session both outlive it), so without this gate the page
+  kept showing "their" balances to nobody in particular. Money UI also refuses to
+  render while `useSession()` is not `true`, so a session that expires with the
+  tab still open cannot leave stale balances on screen.
 
 ## Endpoints
 
@@ -50,7 +56,10 @@ is registered.
 | `POST /api/auth/account` | `{action:"password"}` or `{action:"delete", confirm:"DELETE"}` — both require the current password |
 
 Rate limits (per IP, per process): register 10/min, login 8/min, account changes
-6/min. Cloudflare rate rules sit in front of these.
+6/min. The credential endpoints (login, recover, register) **also** count in a
+Postgres `rate_limits` table, so a restart does not clear them and a second
+container cannot double the allowance. Login is bucketed per address as well as
+per IP, which is what stops a slow distributed attempt on one account.
 
 All mutating routes also check the `Origin` header against `Host`.
 
@@ -82,10 +91,12 @@ registration and shown exactly once.
 changing it silently invalidates every code ever issued. `scripts/setup_db.py` only
 ever writes it if the value is empty.
 
-## Still missing
+## Email verification
 
-- **Email verification.** Needs a mail provider. Addresses are unverified but usable.
-  This is a deliberate trade, not an oversight.
+Optional, and off until a mail provider is configured — see `docs/EMAIL.md`. With
+a key, signup sends a single-use link, `/account` offers a resend, and commenting
+requires a confirmed address. Without one, accounts stay unverified and nothing is
+gated, so the site works exactly as before.
 
 ## A gotcha that has bitten twice
 
@@ -106,4 +117,7 @@ ssh deploy@148.135.185.56 "docker exec gavle-db psql -U gavle -d gavle -tAc \
   'select u.email, count(s.*) from users u left join sessions s on s.user_id=u.id group by 1'"
 ```
 
-Back up the volume like the notify list — `pgdata` is not in `backup.sh` yet.
+Backups: the nightly `gavle-backup.timer` runs `pg_dump` into
+`/var/backups/gavle`, keeping 14 days (this *does* include `pgdata` now — the
+earlier note that it did not is stale). See `docs/RUNBOOK.md` for the restore
+check.

@@ -17,7 +17,7 @@ const MAXMEM = 96 * 1024 * 1024;
 
 export const SESSION_COOKIE =
   process.env.NODE_ENV === "production" ? "__Host-gsess" : "gsess";
-export const SESSION_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
+const SESSION_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
 function scryptAsync(password: string, salt: Buffer, keylen: number): Promise<Buffer> {
   return new Promise((resolve, reject) => {

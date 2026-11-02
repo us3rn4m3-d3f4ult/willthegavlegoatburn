@@ -10,13 +10,19 @@ services:
       args:
         NEXT_PUBLIC_CHAIN_ID: ${NEXT_PUBLIC_CHAIN_ID:-}
         NEXT_PUBLIC_RPC_URL: ${NEXT_PUBLIC_RPC_URL:-}
-        NEXT_PUBLIC_MARKET_ADDRESS: ${NEXT_PUBLIC_MARKET_ADDRESS:-}
         NEXT_PUBLIC_USDC_ADDRESS: ${NEXT_PUBLIC_USDC_ADDRESS:-}
         NEXT_PUBLIC_BOOK_ADDRESS: ${NEXT_PUBLIC_BOOK_ADDRESS:-}
         NEXT_PUBLIC_WC_PROJECT_ID: ${NEXT_PUBLIC_WC_PROJECT_ID:-6c19772fb3f477adf05760e02d6508c3}
-        NEXT_PUBLIC_ALCHEMY_GAS_POLICY_ID: ${NEXT_PUBLIC_ALCHEMY_GAS_POLICY_ID:-612a2415-014c-484b-a1cc-c21320ba5890}
+        NEXT_PUBLIC_GIPHY_API_KEY: ${NEXT_PUBLIC_GIPHY_API_KEY:-}
     container_name: gavle-web
     restart: unless-stopped
+    # Bounded logs: the app writes client-error reports (with user-agent) and mail
+    # failures to stdout. Without a cap these grow on the host forever.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     env_file:
       - ../.env.local
     environment:
@@ -41,6 +47,11 @@ services:
     image: caddy:2-alpine
     container_name: gavle-caddy
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     ports:
       - "80:80"
       - "443:443"
@@ -60,6 +71,11 @@ services:
     image: postgres:16-alpine
     container_name: gavle-db
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     env_file:
       - ../.env.local
     environment:

@@ -5,44 +5,43 @@ import Link from "next/link";
 import { TradePanel } from "@/components/TradePanel";
 import { useTradeState } from "@/components/TradeProvider";
 import { useSession } from "@/components/useSession";
-
-type Book = { asks: { price: number; isYes: boolean }[]; bids: { price: number; isYes: boolean }[] };
+import { useOrderBook } from "@/components/useOrderBook";
 
 /** Sticky bar at the bottom of the screen on mobile; opens the panel as a sheet. */
 export function MobileTradeBar() {
   const { pick, requestSide } = useTradeState();
   const signedIn = useSession();
+  const { book } = useOrderBook();
   const [open, setOpen] = useState(false);
-  const [yes, setYes] = useState(0.5);
-
-  useEffect(() => {
-    let alive = true;
-    const load = () => {
-      fetch("/api/orders", { cache: "no-store" })
-        .then((r) => r.json() as Promise<Book>)
-        .then((b) => {
-          if (!alive) return;
-          const ask = (b.asks ?? []).filter((l) => l.isYes).sort((a, c) => a.price - c.price)[0];
-          const bid = (b.bids ?? []).filter((l) => l.isYes).sort((a, c) => c.price - a.price)[0];
-          if (ask && bid) setYes((ask.price + bid.price) / 2);
-          else if (ask) setYes(ask.price);
-          else if (bid) setYes(bid.price);
-        })
-        .catch(() => {});
-    };
-    load();
-    const t = setInterval(load, 20_000);
-    return () => {
-      alive = false;
-      clearInterval(t);
-    };
-  }, []);
 
   // Tapping a price in the book should open the sheet on mobile.
   useEffect(() => {
     if (pick) setOpen(true);
   }, [pick]);
 
+  // A sheet over the page: Esc closes it and the page behind must not scroll.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = previous;
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const bestAsk = (book?.asks ?? [])
+    .filter((l) => l.isYes)
+    .sort((a, c) => a.price - c.price)[0];
+  const bestBid = (book?.bids ?? [])
+    .filter((l) => l.isYes)
+    .sort((a, c) => c.price - a.price)[0];
+
+  const yes = bestAsk && bestBid ? (bestAsk.price + bestBid.price) / 2 : (bestAsk?.price ?? bestBid?.price ?? 0.5);
   const yesC = (yes * 100).toFixed(1);
   const noC = ((1 - yes) * 100).toFixed(1);
 
@@ -54,10 +53,10 @@ export function MobileTradeBar() {
       >
         {signedIn === false ? (
           <Link
-            href="/register"
+            href="/login"
             className="flex h-11 items-center justify-center rounded-btn bg-fg text-[13px] font-semibold text-black"
           >
-            Register to trade
+            Sign in to trade
           </Link>
         ) : null}
         <div className={signedIn === false ? "hidden" : "flex gap-2"}>
@@ -85,7 +84,7 @@ export function MobileTradeBar() {
       </div>
 
       {open ? (
-        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Trade">
           <button
             type="button"
             aria-label="Close trade panel"
@@ -93,7 +92,7 @@ export function MobileTradeBar() {
             className="absolute inset-0 bg-black/75"
           />
           <div
-            className="absolute inset-x-0 bottom-0 max-h-[92dvh] overflow-y-auto border-t border-line bg-black px-3 pt-3"
+            className="absolute inset-x-0 bottom-0 max-h-[92dvh] overflow-y-auto overscroll-contain border-t border-line bg-black px-3 pt-3"
             style={{ paddingBottom: "calc(5rem + env(safe-area-inset-bottom))" }}
           >
             <div className="mb-3 flex items-center justify-between">
@@ -101,7 +100,7 @@ export function MobileTradeBar() {
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="h-7 border border-line px-2.5 text-[11.5px] text-muted"
+                className="h-10 border border-line px-3 text-[11.5px] text-muted transition-colors hover:border-line2 hover:text-fg sm:h-8"
               >
                 Close
               </button>

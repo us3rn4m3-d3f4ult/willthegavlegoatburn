@@ -8,6 +8,8 @@ import {
 } from "@/lib/auth";
 import { dbReady, getPool } from "@/lib/db";
 import { clientIp, createLimiter, json, readJson } from "@/lib/httpx";
+import { MAIL_CONFIGURED, issueToken, sendAlreadyRegistered, sendVerification } from "@/lib/mail";
+import { allowPersistent } from "@/lib/rateLimit";
 import { issueCodes } from "@/lib/recovery";
 import { createSession } from "@/lib/session";
 import { checkUsername } from "@/lib/username";
@@ -21,6 +23,9 @@ export async function POST(req: Request) {
   if (crossOrigin(req)) return json({ ok: false, error: "bad_origin" }, 403);
   if (!allow(clientIp(req))) {
     return json({ ok: false, error: "rate_limited" }, 429, { "Retry-After": "60" });
+  }
+  if (!(await allowPersistent(`register:ip:${clientIp(req)}`, 30, 3600))) {
+    return json({ ok: false, error: "rate_limited" }, 429, { "Retry-After": "600" });
   }
 
   const body = await readJson<{ email?: unknown; password?: unknown; username?: unknown }>(req);
@@ -54,10 +59,17 @@ export async function POST(req: Request) {
   } catch (err) {
     const e = err as { code?: string; constraint?: string };
     if (e.code === "23505") {
-      return json(
-        { ok: false, error: e.constraint?.includes("username") ? "username_taken" : "email_taken" },
-        409,
-      );
+      if (e.constraint?.includes("username")) {
+        return json({ ok: false, error: "username_taken" }, 409);
+      }
+      // The address already has an account. Saying so would tell anyone who asks
+      // whether a person is registered here, so with mail configured the answer
+      // is identical to a success and the owner gets an email instead.
+      if (MAIL_CONFIGURED) {
+        void sendAlreadyRegistered(email);
+        return json({ ok: true, pending: true }, 200);
+      }
+      return json({ ok: false, error: "email_taken" }, 409);
     }
     return json({ ok: false, error: "db_error" }, 500);
   }
@@ -68,6 +80,12 @@ export async function POST(req: Request) {
   // Recovery codes are the only account-recovery path — there is no reset email.
   // Failure here must not block signup, so the account is still usable.
   const recoveryCodes = await issueCodes(userId).catch(() => [] as string[]);
+
+  // Verification mail is fire-and-forget: a mail outage must not lose a signup.
+  if (MAIL_CONFIGURED) {
+    const verifyToken = await issueToken(userId, "verify").catch(() => null);
+    if (verifyToken) void sendVerification(email, verifyToken);
+  }
 
   return json({ ok: true, user: { id: userId, email, username }, recoveryCodes }, 200, {
     "Set-Cookie": sessionCookie(token),

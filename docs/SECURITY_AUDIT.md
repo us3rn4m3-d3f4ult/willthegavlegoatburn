@@ -202,6 +202,70 @@ the contract is already non-custodial, and hiding it hides nothing from an attac
 - [ ] A `LICENSE` file — without one the code is "all rights reserved" and nobody may
       legally reuse it, which defeats the point
 
+## Status update — 2 November 2026
+
+What has changed since the findings above were written.
+
+| Finding | Status |
+|---|---|
+| F-03 Nothing backed up | **Fixed.** `gavle-backup.timer` runs `pg_dump` nightly into `/var/backups/gavle` (14 days kept, `gunzip -t` verified). Dumps from 31 Oct, 1 Nov and 2 Nov are on the box and one has been restored into a scratch database (`docs/RUNBOOK.md`). `notify.jsonl` is still only on its volume — export it weekly. |
+| F-04 CSP `'unsafe-inline'` | **Attempted, reverted, partially hardened.** The nonce recipe from Next's docs was implemented properly (nonce on the *request* headers too) and deployed: **1 of 45 `<script>` tags came back with a nonce**, so `'strict-dynamic'` blocked hydration and the page was not interactive. Reverted within minutes to `'self' 'unsafe-inline'`, and added `script-src-attr 'none'`, which does block inline event handlers. Closure of F-04 needs a different mechanism (hashes computed by a build step) or a Next version that stamps every script. **Do not retry without measuring `<script` vs `nonce=` in the served HTML.** |
+| F-05 Rate limiting per process | **Fixed for credentials.** Login, registration and recovery additionally count in a Postgres `rate_limits` table, bucketed per IP *and* per hashed address, so a restart or a second container cannot reset them. Comment/search limits stay in memory. **Cloudflare rate rules are still a step in a doc, not a fact** — create them before launch. |
+| F-08 No moderation escape hatch | **Fixed.** A report button (accounts older than an hour, one report each) flags a comment for review and hides it at three; every hide is logged and reversible with one SQL statement (`docs/METRICS.md`). |
+
+### New findings
+
+**F-09 — 13 npm advisories with no published fix (Low–Medium, accepted).**
+
+`npm audit` reports 1 moderate and 12 high. Every one is transitive inside the
+wallet stack plus the build toolchain, and **none can be fixed by upgrading**:
+the registry has no patched release of `postcss` (8.5.32 is latest, and the
+advisories are against it) or of `@walletconnect/ethereum-provider` (2.26.0 is
+latest), and the `zod` fix is a major bump the Reown/Coinbase SDKs do not accept.
+
+| Package | Advisory | Real reach |
+|---|---|---|
+| `postcss` ×4 (via `next`, `@tailwindcss/postcss`) | sourceMappingURL arbitrary file read, `</style>` XSS | Build time only. We never parse CSS we did not write. |
+| `zod` (via `@reown/appkit`, `@coinbase/cdp-sdk`) | memory exhaustion validating oversized collections | Only inside the wallet-connect modal, which is dynamically imported on click. A hostile WalletConnect proposal could OOM that tab; no key material is involved. |
+| `abitype` | via `zod` | same |
+
+Re-run `npm audit` before launch and take the fixes when they exist.
+
+**F-10 — Registration reveals whether an address has an account (Low, conditional).**
+With a mail provider configured the answer is now neutral (`{ok:true,pending:true}`
+plus an email to the owner). Without one it still returns `409 email_taken`,
+because otherwise a returning user cannot be told to sign in. Configure mail
+(`docs/EMAIL.md`) to close it.
+
+**F-12 — Every visitor looked like a different IP (High, fixed).**
+Found while checking the live site on 2 Nov. Caddy's `reverse_proxy { trusted_proxies … }`
+did not influence `{client_ip}` (that needs the **global** `servers` block), so
+`X-Real-IP` was the **Cloudflare edge** address. Measured: 12 login attempts from one
+browser produced **11 distinct `login:ip` buckets**, all in Cloudflare ranges, and not
+one 429. So every per-IP limit was decoration, and `sessions.ip` in "your devices"
+showed a Cloudflare IP.
+
+Fixed in `infra/Caddyfile`:
+
+```
+servers {
+  trusted_proxies static <cloudflare ranges>
+  client_ip_headers CF-Connecting-IP X-Forwarded-For
+}
+```
+
+Safe here because ufw and `DOCKER-USER` only admit 80/443 from Cloudflare ranges, so
+the origin cannot be reached with a forged header. Verified after the change: the
+ninth login attempt from one browser returns `429 rate_limited`, and the bucket is
+the real client IP.
+
+**F-11 — A wallet can be linked with a contract signature (Info).**
+`/api/auth/link-wallet` accepts ERC-1271 signatures, and ERC-6492 when the client
+sends `factory` + `factoryData` for an undeployed account. It only *links* an
+address — it cannot move funds. No component calls it yet, so the endpoint is
+unused until a "link this wallet" button ships; delete it if that is not planned.
+
+
 ## Re-running this review
 
 ```bash

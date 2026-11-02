@@ -42,6 +42,11 @@ function provider(): Eip1193 | null {
 }
 
 export function WalletProvider({ children }: { children: React.ReactNode }) {
+  // A wallet is only ever attached on behalf of an account. Signing out (or
+  // deleting the account) leaves the extension and the WalletConnect session
+  // alive, so without this the next render — and the next person to use this
+  // device — would still be looking at the previous owner's wallet.
+  const signedIn = useSession();
   const [account, setAccount] = useState<Address | null>(null);
   const [chainId, setChainId] = useState<number | null>(null);
   const [hasProvider, setHasProvider] = useState(false);
@@ -79,6 +84,13 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (signedIn !== true) {
+      // Signed out: drop whatever was attached. Nothing may read a wallet
+      // address until there is a session that owns it.
+      setAccount(null);
+      setChainId(null);
+      return;
+    }
     const eth = provider();
     if (!eth) return;
     setHasProvider(true);
@@ -101,7 +113,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       eth.removeListener?.("accountsChanged", onAccounts as never);
       eth.removeListener?.("chainChanged", onChain as never);
     };
-  }, []);
+  }, [signedIn]);
 
   // Pull the WalletConnect bundle down in the background: it is large, and
   // downloading it on tap is what made mobile feel broken.
@@ -115,6 +127,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   // the persisted WalletConnect session on load, and again every time the tab
   // comes back to the foreground after the hand-off.
   useEffect(() => {
+    if (signedIn !== true) return;
     const projectId = process.env.NEXT_PUBLIC_WC_PROJECT_ID;
     if (!projectId) return;
     let cancelled = false;
@@ -156,7 +169,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       cancelled = true;
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, []);
+  }, [signedIn]);
 
   const connect = useCallback(async (target?: Announced) => {
     // MetaMask refuses a second wallet_requestPermissions while one is pending
@@ -328,7 +341,7 @@ export function useWallet(): WalletCtx {
   return ctx;
 }
 
-export function ConnectWallet() {
+export function ConnectWallet({ block = false }: { block?: boolean }) {
   const { account, connect, connectWalletConnect, disconnect, connecting, hasProvider, wrongChain, ensureChain, wallets, connectError } =
     useWallet();
   const signedIn = useSession();
@@ -350,7 +363,11 @@ export function ConnectWallet() {
   if (signedIn === null) {
     return (
       <span
-        className="hidden h-8 w-[92px] animate-pulse rounded-btn bg-surface2 lg:block"
+        className={
+          block
+            ? "block h-11 w-full animate-pulse rounded-btn bg-surface2"
+            : "hidden h-8 w-[92px] animate-pulse rounded-btn bg-surface2 lg:block"
+        }
         aria-hidden
       />
     );
@@ -359,10 +376,14 @@ export function ConnectWallet() {
   if (signedIn === false) {
     return (
       <Link
-        href="/register"
-        className="hidden h-8 items-center rounded-btn bg-fg px-3 text-[12px] font-semibold text-black transition-opacity hover:opacity-90 lg:flex"
+        href="/login"
+        className={
+          block
+            ? "flex h-11 w-full items-center justify-center rounded-btn bg-fg px-3 text-[13px] font-semibold text-black transition-opacity hover:opacity-90"
+            : "hidden h-8 items-center rounded-btn bg-fg px-3 text-[12px] font-semibold text-black transition-opacity hover:opacity-90 lg:flex"
+        }
       >
-        Register
+        Sign in
       </Link>
     );
   }
@@ -373,7 +394,9 @@ export function ConnectWallet() {
       <button
         onClick={connectWalletConnect}
         disabled={connecting}
-        className="h-8 rounded-btn bg-fg px-3 text-[12px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-60"
+        className={`rounded-btn bg-fg px-3 font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-60 ${
+          block ? "flex h-11 w-full items-center justify-center text-[13px]" : "h-8 text-[12px]"
+        }`}
       >
         {connecting ? "Opening…" : "Connect wallet"}
       </button>
@@ -386,7 +409,9 @@ export function ConnectWallet() {
         <button
           onClick={() => setOpen(true)}
           disabled={connecting}
-          className="h-8 rounded-btn bg-fg px-3 text-[12px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-60"
+          className={`rounded-btn bg-fg px-3 font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-60 ${
+            block ? "flex h-11 w-full items-center justify-center text-[13px]" : "h-8 text-[12px]"
+          }`}
         >
           {connecting ? "Connecting…" : "Connect wallet"}
         </button>
@@ -438,12 +463,13 @@ export function ConnectWallet() {
               </ul>
 
               <p className="mt-3 text-[11px] leading-relaxed text-dim">
-                Only wallets installed in this browser appear here. Mobile wallets need
-                WalletConnect, which is not configured yet.
+                Only wallets installed in this browser appear here. On a phone, the{" "}
+                <span className="text-muted">Connect wallet</span> button opens WalletConnect
+                instead — or open this page inside your wallet app.
               </p>
               <p className="mt-2 text-[11px] leading-relaxed text-dim">
-                To trade you need <span className="text-muted">USDC on Base</span>. USDC on
-                any other network will not show up.
+                To trade you need <span className="text-muted">USDC on Base</span>, plus a few
+                cents of ETH for the network fee. USDC on any other network will not show up.
               </p>
 
               {connecting ? (
@@ -471,7 +497,9 @@ export function ConnectWallet() {
     return (
       <button
         onClick={ensureChain}
-        className="h-8 rounded-btn border border-yes/40 px-3 text-[12px] font-medium text-yes hover:bg-yes/10"
+        className={`rounded-btn border border-yes/40 px-3 font-medium text-yes hover:bg-yes/10 ${
+          block ? "flex h-11 w-full items-center justify-center text-[13px]" : "h-8 text-[12px]"
+        }`}
       >
         Switch network
       </button>
@@ -479,8 +507,12 @@ export function ConnectWallet() {
   }
 
   return (
-    <div className="flex items-center gap-1">
-      <span className="num rounded-btn border border-line px-2.5 py-1.5 font-mono text-[11.5px] text-fg">
+    <div className={block ? "flex w-full items-center gap-1.5" : "flex items-center gap-1"}>
+      <span
+        className={`num rounded-btn border border-line px-2.5 py-1.5 font-mono text-[11.5px] text-fg ${
+          block ? "min-w-0 flex-1 text-center" : ""
+        }`}
+      >
         {account.slice(0, 6)}…{account.slice(-4)}
       </span>
       <button
@@ -495,7 +527,9 @@ export function ConnectWallet() {
         }}
         title="Copy wallet address"
         aria-label="Copy wallet address"
-        className="flex h-8 w-8 items-center justify-center rounded-btn border border-line text-muted transition-colors hover:border-line2 hover:text-fg"
+        className={`flex items-center justify-center rounded-btn border border-line text-muted transition-colors hover:border-line2 hover:text-fg ${
+          block ? "h-9 w-9" : "h-8 w-8"
+        }`}
       >
         {copied ? (
           <span className="text-[12px] text-yes">✓</span>
@@ -511,6 +545,14 @@ export function ConnectWallet() {
           </svg>
         )}
       </button>
+      {block ? (
+        <button
+          onClick={disconnect}
+          className="h-9 rounded-btn border border-line px-2.5 text-[11.5px] text-muted transition-colors hover:border-line2 hover:text-fg"
+        >
+          Disconnect
+        </button>
+      ) : null}
     </div>
   );
 }

@@ -19,7 +19,11 @@ export function ClientErrorReporter() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         keepalive: true,
-        body: JSON.stringify({ kind, ...payload }),
+        body: JSON.stringify({
+          kind,
+          path: window.location.pathname.slice(0, 120),
+          ...payload,
+        }),
       }).catch(() => {});
     };
 

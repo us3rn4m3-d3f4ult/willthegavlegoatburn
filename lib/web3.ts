@@ -17,6 +17,12 @@ export const chain = defineChain({
   name: CHAIN_ID === 8453 ? "Base" : CHAIN_ID === 84532 ? "Base Sepolia" : `Chain ${CHAIN_ID}`,
   nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
   rpcUrls: { default: { http: [RPC_URL] } },
+  // `publicClient.multicall` looks the address up on the chain object and throws
+  // "chain does not support contract multicall3" without this. Same address on
+  // every chain we use; it is the canonical deployment.
+  contracts: {
+    multicall3: { address: "0xcA11bde05977b3631167028862bE2a173976CA11" },
+  },
   blockExplorers:
     CHAIN_ID === 8453
       ? { default: { name: "Basescan", url: "https://basescan.org" } }
@@ -38,9 +44,6 @@ export const publicClient = createPublicClient({
 
 
 const usdc = process.env.NEXT_PUBLIC_USDC_ADDRESS ?? "";
-
-/** True when the USDC token address is known. */
-export const CONFIGURED = /^0x[0-9a-fA-F]{40}$/.test(usdc);
 
 export const USDC_ADDRESS = usdc as Address;
 export const CHAIN_ID_PUBLIC = CHAIN_ID;

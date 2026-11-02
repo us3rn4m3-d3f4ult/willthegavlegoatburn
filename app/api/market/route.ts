@@ -1,13 +1,13 @@
 import { parseAbiItem } from "viem";
+import { readLevels } from "@/lib/bookRead";
 import { dbReady, getPool } from "@/lib/db";
-import { BOOK_ABI, BOOK_ADDRESS, BOOK_CONFIGURED, publicClient } from "@/lib/web3";
+import { BOOK_ADDRESS, BOOK_CONFIGURED, publicClient } from "@/lib/web3";
 import { json } from "@/lib/httpx";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const SAMPLE_MS = 55_000; // at most one stored point per minute
-const MAX_ORDERS = 200; // matches the /api/orders cap
 const LOOKBACK = 5_000n; // ~2.8 hours of Base blocks
 
 const FILLED_EVENT = parseAbiItem(
@@ -18,51 +18,6 @@ const PLACED_EVENT = parseAbiItem(
 );
 
 type Level = { price: number; shares: number; isYes: boolean; isAsk: boolean };
-
-/** Every resting order, read straight from contract state. No indexer needed. */
-async function readBook(): Promise<Level[]> {
-  const count = (await publicClient.readContract({
-    address: BOOK_ADDRESS,
-    abi: BOOK_ABI,
-    functionName: "nextOrderId",
-  })) as bigint;
-
-  const total = Math.min(Number(count) - 1, MAX_ORDERS);
-  if (total < 1) return [];
-
-  const now = Math.floor(Date.now() / 1000);
-  const ids = Array.from({ length: total }, (_, i) => BigInt(i + 1));
-  const raw = await Promise.all(
-    ids.map((id) =>
-      publicClient
-        .readContract({ address: BOOK_ADDRESS, abi: BOOK_ABI, functionName: "orders", args: [id] })
-        .catch(() => null),
-    ),
-  );
-
-  const out: Level[] = [];
-  for (const o of raw) {
-    if (!o) continue;
-    const [, isYes, isAsk, active, expiresAt, shares, price] = o as readonly [
-      string,
-      boolean,
-      boolean,
-      boolean,
-      bigint,
-      bigint,
-      bigint,
-      bigint,
-    ];
-    if (!active || Number(expiresAt) <= now || shares === 0n) continue;
-    out.push({
-      price: Number(price) / 1e18,
-      shares: Number(shares) / 1e6,
-      isYes,
-      isAsk,
-    });
-  }
-  return out;
-}
 
 /**
  * Catching up on fills means hundreds of 10-block eth_getLogs calls (Alchemy's
@@ -188,7 +143,7 @@ export async function GET() {
   let price = 0.5;
   let liquidity = 0;
   try {
-    const levels = await readBook();
+    const { levels } = await readLevels();
 
     // Both outcomes describe the same market, so NO orders have to be mirrored:
     // a NO bid at p is a YES ask at 1-p, and a NO ask at p is a YES bid at 1-p.

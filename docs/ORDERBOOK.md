@@ -1,74 +1,46 @@
-# Adding an order book
+# Order book: what is actually deployed
 
-## The decision this needs
+The market is a **CLOB** (`GavleGoatMarket.sol`): users post their own bids and
+asks, the contract holds an internal USDC balance, and `withdraw` is per-caller —
+no owner, no pause, no fee switch, no treasury.
 
-We already have both mechanisms built and tested. The question is how they coexist,
-because **two separate contracts = two prices for the same question**, which is worse
-than either alone.
+## On Base mainnet (chain 8453)
 
-| Contract | Lines | Tests | Status |
-|---|---|---|---|
-| `GavleGoatMarket.sol` — order book (CLOB) | ~500 | **17 passing** | built, never deployed |
-| `GavleGoatAmm.sol` — AMM backstop | ~360 | **16 passing** | **live on Base**, 10.882199 USDC seeded |
+| Contract | Address | State |
+|---|---|---|
+| `GavleGoatMarket` (CLOB) | `0xcfa25534fc14929e29bd1f4fefe5cd4d5ce9880f` | **the live market** — this is `NEXT_PUBLIC_BOOK_ADDRESS`, and everything the site reads |
+| `GavleGoatMarket` (earlier deploy) | `0x5c1792ab4B81654656913A3F01C4e92Cb28601E9` | not read by the site — holds **$10.88 USDC**, credited to nobody (verified: `usdcBalance` of the deployer is 0, and it predates `lockedYes`) |
+| `GavleGoatAmm` (AMM backstop) | address not recorded here | seeded with 10.882199 USDC by the deployer; not used by the site |
 
-## Why an order book is the right primary market
+Two decisions this leaves open, both cheap:
 
-- **Costs the operator nothing.** Users post their own offers and keep the spread.
-- **Real price discovery.** Somebody choosing 62¢ is a genuine opinion; an AMM price is
-  just "what the last click did".
-- **No capital risk for you.** You are never the counterparty.
-- **It's what Polymarket does**, and it's what traders expect to see.
+1. **The AMM seed.** As seeder you can `redeem()` after resolution to get the
+   ~$10.88 back; until then it just sits there. Nothing on the site reads it, so
+   the only cost of leaving it is the capital.
+2. **The older CLOB.** It has no orders and nothing points at it. Ignore it; the
+   address is recorded above only so nobody re-discovers it and wonders.
 
-Its weakness is the one we discussed: **day one it is empty**, and with no fees nobody
-is paid to post. That is exactly what the AMM is good at — it always quotes.
+## How the site reads the book
 
-## Three ways to combine them
+No indexer: `app/api/orders/route.ts` calls `nextOrderId()` then `orders(i)` for
+every id in **one multicall** (multicall3), keeps the raw levels for 3 seconds,
+and filters per request. `lib/bookRead.ts` is shared with `/api/market` so the
+price chart and the book always agree. A 200-order book used to cost 200 RPC calls
+per request *per open tab*; it is now one call plus cache.
 
-### Option 1 — CLOB only (simplest, cheapest)
-Deploy `GavleGoatMarket`, point the site at it, retire the AMM.
+The client polls that once (`components/useOrderBook.ts`) and components subscribe,
+so the order book, trade panel, mobile bar and open orders share one timer.
 
-- Cost: ~$0.10 gas. **$0** of your capital at risk.
-- Trade-off: an empty book until people post. No fallback price.
-- The 10.882199 USDC already sitting in the AMM is not lost — as seeder you can call
-  `redeem()` after resolution (Jan 2027) and get it back. It is simply idle until then.
+## The thing that actually matters
 
-### Option 2 — CLOB primary + AMM linked as backstop (right answer, more work)
-One contract that holds one share ledger, with both:
-- a limit order book users can post to, and
-- the AMM pool filling any gap so a trade is always possible.
+**An empty book is the launch state.** With no maker, a market buy has nothing to
+fill — the UI says so and points people at limit orders. That is a product problem,
+not a code problem: either seed a two-sided book from the project wallet or accept
+a limit-only start.
 
-- Cost: ~$0.10 gas + a **new contract** (`GavleGoatBook.sol`, ~600 lines) and tests.
-- Realistically **a full day of careful work**, plus the existing 33 tests have to be
-  carried over and re-run.
-- This is what "an order book and a backstop" actually requires — you cannot bolt two
-  contracts together afterwards without ending up with two prices.
+## Known gaps
 
-### Option 3 — deploy the CLOB next to the live AMM (not recommended)
-Two live markets, two prices, both real money. Users will not know which one is "the"
-price. Avoid.
-
-## Recommendation
-
-**Option 1 now, Option 2 when there is traffic.**
-
-Reason: a book with no participants is the same as a book that does not exist, and the
-AMM's only advantage (always quotable) is worth very little at $10 of depth. Get the
-book live, let real users post offers, and only then spend a day building the combined
-contract if the book is actually filling.
-
-## What Option 1 involves
-
-1. `forge create GavleGoatMarket` with native Base USDC + resolver + timestamps (~$0.10)
-2. Point `NEXT_PUBLIC_MARKET_ADDRESS` at it, rebuild, redeploy
-3. Swap the trade panel from `buy()`/`sell()` (AMM) to `placeAsk`/`placeBid`/`fillAsk`/`fillBid`
-4. Wire the existing order book UI to real orders (it currently renders demo levels)
-5. Ship `cancelOrder` so anyone can withdraw an unfilled offer
-
-Steps 3–5 are front-end work; the contract side is already done and tested.
-
-## Known gaps either way
-
-- **No indexer**, so the book has to be read from events; the free Base RPC refuses
-  `eth_getLogs` over wide ranges, so a paid RPC or an indexer is needed to render
-  resting orders. This is the real blocker for showing a book, not the contract.
-- **Resolution** stays a single key with a 72-hour timelock on both contracts.
+- **No maker / no liquidity programme.** See above.
+- **Resolution is one key**, the same address as the deployer, with a timelock and
+  a permissionless `voidMarket()` fallback after the deadline (`docs/RUNBOOK.md`
+  covers the key handling).

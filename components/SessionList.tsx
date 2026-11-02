@@ -51,7 +51,6 @@ function ago(iso: string): string {
 export function SessionList() {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [note, setNote] = useState("");
 
   const load = useCallback(() => {
     fetch("/api/auth/sessions", { cache: "no-store" })
@@ -66,7 +65,6 @@ export function SessionList() {
 
   async function revoke(sid: string) {
     setBusy(sid);
-    setNote("");
     try {
       await fetch(`/api/auth/sessions?sid=${sid}`, { method: "DELETE" });
       load();
@@ -75,20 +73,10 @@ export function SessionList() {
     }
   }
 
-  async function revokeOthers() {
-    setBusy("others");
-    setNote("");
-    try {
-      await fetch("/api/auth/sessions?others=1", { method: "DELETE" });
-      setNote("Signed out everywhere else.");
-      load();
-    } finally {
-      setBusy(null);
-    }
-  }
-
   if (rows === null) return <p className="mt-2 text-[12px] text-dim">Loading devices…</p>;
-  if (rows.length === 0) return <p className="mt-2 text-[12px] text-dim">No active sessions.</p>;return (
+  if (rows.length === 0) return <p className="mt-2 text-[12px] text-dim">No active sessions.</p>;
+
+  return (
     <div className="mt-3">
       <ul className="divide-y divide-line border-y border-line">
         {rows.map((r) => (
@@ -111,7 +99,7 @@ export function SessionList() {
                 type="button"
                 onClick={() => revoke(r.sid)}
                 disabled={busy === r.sid}
-                className="h-7 shrink-0 border border-line px-2.5 text-[11.5px] text-muted transition-colors hover:border-line2 hover:text-fg disabled:opacity-40"
+                className="h-9 shrink-0 border border-line px-2.5 text-[11.5px] text-muted transition-colors hover:border-line2 hover:text-fg disabled:opacity-40 sm:h-7"
               >
                 {busy === r.sid ? "…" : "Sign out"}
               </button>
@@ -119,8 +107,6 @@ export function SessionList() {
           </li>
         ))}
       </ul>
-
-      {note ? <p className="mt-2 text-[11.5px] text-dim">{note}</p> : null}
     </div>
   );
 }

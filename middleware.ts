@@ -1,17 +1,19 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
- * CSP notes, because this is easy to get wrong.
+ * CSP notes, because this is easy to get wrong — again.
  *
- * Next 15 only stamps a nonce onto *some* of its own script tags (we measured
- * 3 of 32), so a nonce-based `script-src` blocks the hydration chunks and the
- * page renders but never becomes interactive. `'strict-dynamic'` cannot be used
- * either: its presence makes browsers ignore `'self'` entirely.
+ * Tried on 2 Nov 2026: per-response nonce, set on the *request* headers as the
+ * Next docs describe (`x-nonce` + `Content-Security-Policy`), with
+ * `script-src 'self' 'nonce-…' 'strict-dynamic'`. Measured on the live page:
+ * **45 `<script>` tags, 1 with a nonce** — Next 15.5 does not stamp the flight
+ * data scripts, so `'strict-dynamic'` blocked hydration. Same result as the
+ * earlier attempt (3 of 32). Do not retry this without re-measuring.
  *
- * So scripts are `'self' 'unsafe-inline'`. That still blocks third-party script
- * origins, framing and object embedding — the classes of attack that matter for
- * a wallet front-end — but it does **not** mitigate inline XSS. See
- * docs/SECURITY_AUDIT.md, finding F-04, for the plan to tighten this.
+ * So: `'self' 'unsafe-inline'` for scripts (third-party origins still blocked),
+ * plus `script-src-attr 'none'`, which kills inline event handlers — the
+ * payload an HTML injection actually needs. Framing, object/embed, base-uri and
+ * form-action are all locked down.
  */
 const PUBLIC_PREFIXES = ["/maintenance", "/api", "/_next", "/opengraph-image"];
 const PUBLIC_EXACT = new Set([
@@ -48,8 +50,11 @@ function contentSecurityPolicy(isDev: boolean): string {
   return [
     "default-src 'self'",
     `script-src 'self' 'unsafe-inline'${scriptExtra}`,
+    // No inline event handlers: React never emits them, and they are how an HTML
+    // injection usually executes. This is the part of F-04 that is enforceable.
+    "script-src-attr 'none'",
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https:",
+    "img-src 'self' data: blob: https://*.giphy.com https://i.giphy.com https://*.walletconnect.com https://*.walletconnect.org https://*.reown.com https://*.web3modal.com",
     "font-src 'self' data:",
     // Chain RPC and wallet transport. Keep this list explicit: adding a wildcard
     // here is how wallet-drainer scripts get to phone home.
@@ -58,6 +63,10 @@ function contentSecurityPolicy(isDev: boolean): string {
       rpcOrigin,
       "https://sepolia.base.org",
       "https://mainnet.base.org",
+      // GIPHY requires its search call to come from the client, so the browser
+      // talks to api.giphy.com directly. The images themselves are covered by
+      // `img-src ... https:`.
+      "https://api.giphy.com",
       "https://*.walletconnect.com",
       "wss://*.walletconnect.com",
       "https://*.walletconnect.org",
