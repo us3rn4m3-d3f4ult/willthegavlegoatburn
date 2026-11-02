@@ -113,7 +113,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     const eth = (target?.provider ?? provider() ?? wallets[0]?.provider) as Eip1193 | null;
     if (!eth) {
       inFlight.current = false;
-      setConnectError("No wallet found in this browser. Install MetaMask or Coinbase Wallet.");
+      setConnectError(
+        "No wallet in this browser. On a phone, open the site inside MetaMask or Coinbase Wallet — both have a browser built in.",
+      );
       return;
     }
     setConnectError("");

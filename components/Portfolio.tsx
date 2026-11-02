@@ -11,6 +11,7 @@ import {
 } from "@/lib/web3";
 import { useWallet } from "@/components/WalletProvider";
 import { useSession } from "@/components/useSession";
+import { WalletDeepLinks } from "@/components/WalletDeepLinks";
 
 type Snap = {
   wallet: number;
@@ -96,11 +97,12 @@ export function Portfolio() {
           <div className="mt-2 space-y-1.5 text-[12.5px] leading-relaxed text-muted">
             <p>You are signed in, but no wallet is connected on this device.</p>
             <p className="text-dim">
-              A wallet only exists inside a browser that has one. On a phone, open this site
-              inside the MetaMask or Coinbase Wallet app browser; on a desktop, install the
-              extension. Your funds are on the blockchain and belong to the wallet, not to this
-              account.
+              Your funds are on the blockchain and belong to the wallet, not to this account. On
+              a desktop, install the browser extension instead.
             </p>
+            <div className="pt-1">
+              <WalletDeepLinks />
+            </div>
           </div>
         ) : (
           <p className="mt-2 text-[12.5px] leading-relaxed text-muted">

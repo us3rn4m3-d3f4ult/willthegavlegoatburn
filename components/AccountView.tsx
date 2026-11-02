@@ -158,7 +158,7 @@ export function AccountView() {
             Create account
           </Link>
         </div>
-        {error ? <p className="mt-3 text-[12px] text-yes">{error}</p> : null}
+        {error ? <p className="mt-3 text-[12px] text-no">{error}</p> : null}
       </div>
     );
   }
@@ -246,8 +246,8 @@ export function AccountView() {
         </form>
       </section>
 
-      {error ? <p className="text-[12px] text-yes">{error}</p> : null}
-      {notice ? <p className="text-[12px] text-no">{notice}</p> : null}
+      {error ? <p className="text-[12px] text-no">{error}</p> : null}
+      {notice ? <p className="text-[12px] text-yes">{notice}</p> : null}
 
       <section className="panel p-5">
         <h2 className="text-[13px] font-semibold text-fg">Recovery codes</h2>
@@ -275,6 +275,7 @@ export function AccountView() {
         </div>
       </section>
 
+      <div className="hazard" aria-hidden="true" />
       <section className="panel border-no/25 p-5">
         <h2 className="text-[13px] font-semibold text-fg">Delete account</h2>
         <p className="mt-1.5 text-[12px] leading-relaxed text-muted">
@@ -323,7 +324,7 @@ export function AccountView() {
         ) : (
           <button
             onClick={() => setDeleting(true)}
-            className="mt-3 h-9 rounded-btn border border-yes/40 px-4 text-[12.5px] font-medium text-yes transition-colors hover:bg-yes/10"
+            className="mt-3 h-9 rounded-btn border border-no/40 px-4 text-[12.5px] font-medium text-no transition-colors hover:bg-no/10"
           >
             Delete my account
           </button>
