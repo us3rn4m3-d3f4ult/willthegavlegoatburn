@@ -163,6 +163,15 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     }
     setConnecting(true);
     setConnectError("");
+    // The SDK is large and its modal can stall; never leave the button spinning
+    // with nothing to explain why.
+    const stall = setTimeout(() => {
+      setConnecting(false);
+      setConnectError(
+        "WalletConnect is taking too long. On a phone, open this site inside MetaMask or Coinbase Wallet instead.",
+      );
+    }, 25_000);
+
     try {
       const { EthereumProvider } = await import("@walletconnect/ethereum-provider");
       const wc = await EthereumProvider.init({
@@ -193,6 +202,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     } catch {
       setConnectError("WalletConnect did not complete. Try again.");
     } finally {
+      clearTimeout(stall);
+
       setConnecting(false);
     }
   }, []);
@@ -312,13 +323,20 @@ export function ConnectWallet() {
   if (!anyProvider) {
     // No injected wallet: WalletConnect is the only way in from a mobile browser.
     return (
-      <button
-        onClick={connectWalletConnect}
-        disabled={connecting}
-        className="h-8 rounded-btn bg-fg px-3 text-[12px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-60"
-      >
-        {connecting ? "Connecting..." : "Connect wallet"}
-      </button>
+      <div className="flex flex-col items-end gap-1">
+        <button
+          onClick={connectWalletConnect}
+          disabled={connecting}
+          className="h-8 rounded-btn bg-fg px-3 text-[12px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-60"
+        >
+          {connecting ? "Opening…" : "Connect wallet"}
+        </button>
+        {connectError ? (
+          <p className="max-w-[240px] text-right text-[10.5px] leading-relaxed text-dim">
+            {connectError}
+          </p>
+        ) : null}
+      </div>
     );
   }
 
