@@ -49,7 +49,7 @@ function contentSecurityPolicy(isDev: boolean): string {
     "default-src 'self'",
     `script-src 'self' 'unsafe-inline'${scriptExtra}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
+    "img-src 'self' data: blob: https:",
     "font-src 'self' data:",
     // Chain RPC and wallet transport. Keep this list explicit: adding a wildcard
     // here is how wallet-drainer scripts get to phone home.
@@ -60,6 +60,12 @@ function contentSecurityPolicy(isDev: boolean): string {
       "https://mainnet.base.org",
       "https://*.walletconnect.com",
       "wss://*.walletconnect.com",
+      "https://*.walletconnect.org",
+      "wss://*.walletconnect.org",
+      "https://*.web3modal.com",
+      "https://*.web3modal.org",
+      "https://*.reown.com",
+      "https://pulse.walletconnect.org",
       "https://*.coinbase.com",
     ]
       .filter(Boolean)
